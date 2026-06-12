@@ -23,4 +23,6 @@ Define and enforce link lifetime: anonymous links expire, user-owned links persi
 - A custom date in the past or beyond the allowed cap is rejected with a clear error (FA005.4).
 
 ## Related
-- Claim in [[FA003]] flips an anonymous link's TTL to permanent. Admins can force-expire via [[FC003]].
+- Claim in [[FA003]] flips an anonymous link's TTL to permanent — `expires_at` is cleared
+  unconditionally, so a custom anonymous expiry is discarded on claim (by design). Admins can
+  force-expire via [[FC003]].

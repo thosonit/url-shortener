@@ -34,11 +34,8 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 - _Admin_ — `role ∈ {admin, super_admin}` plus a shorter session TTL (FC002.3). Required by all
   `/admin/*`. Checks are by **permission**, not role string (FC002.1).
 
-**Rate limiting.** `POST /api/links` is throttled per IP (FA006). Responses carry
-`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; over-limit → `429` with `Retry-After`.
-
 **Errors.** Common `error.code` values: `VALIDATION_ERROR` (400), `UNAUTHENTICATED` (401),
-`FORBIDDEN` (403), `NOT_FOUND` (404), `GONE` (410), `RATE_LIMITED` (429), `INTERNAL` (500).
+`FORBIDDEN` (403), `NOT_FOUND` (404), `GONE` (410), `INTERNAL` (500).
 
 ---
 
@@ -48,7 +45,7 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 
 | Method | Path | Auth | Feature | Purpose |
 |--------|------|------|---------|---------|
-| `POST` | `/api/links` | anon / user | FA001, FA006 | Create a short link |
+| `POST` | `/api/links` | anon / user | FA001 | Create a short link |
 | `GET` | `/:code` | none | FA002, FA005, FC003 | Resolve & redirect |
 | `GET` | `/api/me/links` | user | FA004 | List own link history |
 

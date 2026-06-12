@@ -1,8 +1,7 @@
 // URL Shortener — database schema (DBML)
 // Derived from docs/features.md. Stack: PostgreSQL + Prisma + Auth.js.
-// Redis holds ephemeral state only (rate-limit counters, cache) — not modeled here.
 //
-// Minimal in-scope schema: FA001–FA006, FC001–FC003, FC006.
+// Minimal in-scope schema: FA001–FA005, FC001–FC003, FC006.
 // Render at https://dbdiagram.io or with `@dbml/cli`.
 
 Project url_shortener {
@@ -44,7 +43,7 @@ Table users {
   id          text [pk, note: 'cuid (Auth.js)']
   email       citext [unique, not null, note: 'case-insensitive; identity + admin search (FC006.1)']
   role        user_role [not null, default: 'user', note: 'FC002.1']
-  status      user_status [not null, default: 'active', note: 'FC006.2']
+  status      user_status [not null, default: 'active', note: 'FC006.2; suspended = session rejected (no link creation/claim); existing links unaffected']
   created_at  timestamptz [not null, default: `now()`, note: 'user-list ordering (FC006.1)']
 
   Indexes {

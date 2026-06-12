@@ -10,11 +10,11 @@ Give authenticated users a view of the links they own.
 ## Sub-features
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
-| FA004.1 | List own links | Show `code`, `original_url`, `click_count`, `created_at`, and status (active/expired). Auth required. |
+| FA004.1 | List own links | Show `code`, `original_url`, `click_count`, `created_at`, and resolved status (**active / expired / disabled**). Auth required. |
 
 ## Acceptance criteria
 - Authenticated users see only their own links (FA004.1).
-- Each row shows current status, including expired vs active per [[FA005]].
+- Each row shows resolved status: `active`, `expired` (per [[FA005]]), or `disabled` (set by an admin via [[FC003]]). The owner sees the true state even though the public redirect returns `404` for disabled links.
 - Anonymous users have no history (links auto-expire instead).
 
 ## Related API

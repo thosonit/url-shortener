@@ -11,7 +11,7 @@ The core idea is small:
 1. **Shorten** — accept a long URL, generate a unique short code, store the mapping.
 2. **Redirect** — look up a short code and issue an HTTP redirect to the original URL.
 
-Everything else (QR codes, expiry, auth, rate limiting) builds on top of those two operations.
+Everything else (QR codes, expiry, auth) builds on top of those two operations.
 
 The system will support:
 
@@ -22,7 +22,7 @@ The system will support:
 User-facing functionality:
 
 - Web/App: Create short links (with QR codes and a copy action), follow redirects, view personal link history, set link expiration, and optionally sign in with Google to save and claim links.
-- CMS: Admins manage all links (search, disable/enable, force-expire), manage users, and review an audit log — all governed by role-based access control.
+- CMS: Admins manage all links (search, disable/enable, force-expire) and manage users — all governed by role-based access control.
 
 ## Planned Features
 
@@ -35,19 +35,17 @@ See [`docs/features.md`](docs/features.md) for the full two-tier feature map (`F
 - [ ] **FA003** — Google sign-in (OAuth · anonymous link claim)
 - [ ] **FA004** — Link history (list own links)
 - [ ] **FA005** — Link expiration / TTL (anon 30d · user permanent · custom expiry date)
-- [ ] **FA006** — Rate limiting (per-IP creation cap)
 
 ### CMS
 
-- [ ] **FC001** — Admin dashboard (KPIs · growth charts)
-- [ ] **FC002** — RBAC / permissions (presets · role assignment · 2FA)
+- [ ] **FC001** — Admin dashboard (KPIs)
+- [ ] **FC002** — RBAC / permissions (presets · role assignment · admin session hardening)
 - [ ] **FC003** — Link management (search · disable/enable · force-expire · clicks)
 - [ ] **FC006** — User management (list · suspend · view links)
-- [ ] **FC007** — Audit log (record mutations · read-only view)
 
 ### Out of scope
 
-Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder, API keys, editing the destination URL, reports & moderation, domain blocklist, and detailed analytics (geo / referrer / device).
+Custom alias / vanity URLs, rate limiting, password-protected links, bulk creation, UTM builder, API keys, editing or deleting your own links, reports & moderation, domain blocklist, audit log, and detailed analytics (geo / referrer / device).
 
 ## Tech stack
 
@@ -59,7 +57,6 @@ The chosen stack. `database.md`, `api.md`, and the [implementation plan](docs/pl
 | API | Next.js Route Handlers |
 | ORM | Prisma |
 | Database | PostgreSQL |
-| Cache / rate limit | Redis |
 | Auth | Auth.js (NextAuth) |
 | App (later) | React Native / Expo |
 

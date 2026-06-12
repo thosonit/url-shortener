@@ -22,6 +22,10 @@ SET user_id = :userId, expires_at = NULL
 WHERE anon_session_id = :anonId AND user_id IS NULL;
 ```
 
+`expires_at` is cleared **unconditionally** — by design. Even if the visitor set a custom
+expiry while anonymous (capped ≤ 30 days, [[FA005]]), claiming the link makes it permanent;
+the earlier anonymous expiry choice is intentionally discarded, not preserved.
+
 ## Acceptance criteria
 - Users can sign in with Google (FA003.1).
 - Anonymous links from the current session are claimed on sign-in and become permanent (FA003.2).

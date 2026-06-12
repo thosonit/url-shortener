@@ -43,7 +43,7 @@ single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
 - Store `anon_session_id` on anonymous `links`.
 - When the visitor signs in with Google:
   - assign `user_id`
-  - clear `expires_at`
+  - clear `expires_at` (unconditionally — a custom anonymous expiry is discarded on claim, by design)
   - keep `anon_session_id` for history if needed
 
 Example claim update:
@@ -76,13 +76,16 @@ A code resolves to one of four outcomes:
 - The single `click_count` counter is the MVP for per-link totals. Time-bucketed analytics
   (daily trends, growth charts) and per-click rows (geo/referrer/device) are out of scope.
 
-## Rate limiting
+## User suspension
 
-- Apply limits to `POST /api/links` for anonymous users.
-- Use an IP-based sliding window or token bucket.
-- Block excessive creation attempts before insert.
+- Suspending a user (`users.status = 'suspended'`) rejects their session: they cannot create
+  new links or claim anonymous ones.
+- Suspension does **not** take down their existing links. Redirect resolution checks only the
+  link's own `status` + expiry, not the owner — so prior links keep resolving. To pull them
+  offline, an admin disables the links individually (see [`features/FC003`](features/FC003-link-management.md)).
 
 ## CMS permissions
 
 - Enforce permissions server-side for all `/admin` endpoints.
-- Use role presets rather than scattered role checks.
+- Use role presets rather than scattered role checks. The canonical role × permission matrix
+  lives in [`features/FC002`](features/FC002-admin-rbac.md).

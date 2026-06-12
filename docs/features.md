@@ -11,7 +11,6 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 - [FA003 — Google sign-in](./features/FA003-google-sign-in.md) — OAuth · anonymous link claim
 - [FA004 — Link history](./features/FA004-link-history.md) — list own links (auth)
 - [FA005 — Link expiration / TTL](./features/FA005-link-expiration-ttl.md) — anon 30d · user permanent · custom expiry date · enforcement
-- [FA006 — Rate limiting](./features/FA006-rate-limiting.md) — per-IP creation cap
 
 ## CMS features
 
@@ -25,11 +24,13 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 ### App / Web
 
 - **Custom alias / vanity URLs** — removed from the development scope.
+- **Rate limiting** — per-IP creation cap; removed from scope.
 - Password-protected links
 - Bulk creation
 - UTM builder
 - API keys
 - Editing the destination URL
+- Deleting or editing your own links (user-initiated)
 
 ### CMS
 

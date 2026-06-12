@@ -25,8 +25,8 @@ Turn a long URL into a shareable short code, for anonymous and authenticated use
 - Result screen shows a scannable QR code for the short URL (FA001.4).
 
 ## Related API
-- `POST /api/links` `{ url, expiresAt? }` → `{ code, shortUrl, expiresAt }` *(rate-limited — see FA006)*
+- `POST /api/links` `{ url, expiresAt? }` → `{ code, shortUrl, expiresAt }`
   - `expiresAt` is optional; when omitted, [[FA005]] applies the default TTL.
 
 ## Related
-- [[FA005]] sets / validates `expires_at` at creation (incl. custom expiry). [[FA006]] caps creation rate.
+- [[FA005]] sets / validates `expires_at` at creation (incl. custom expiry).

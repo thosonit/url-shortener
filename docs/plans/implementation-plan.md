@@ -1,14 +1,14 @@
 # Implementation Plan — URL Shortener
 
 > From docs-only scaffold → working application.
-> Stack (per [README](../../README.md#tech-stack)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Redis · Auth.js**.
+> Stack (per [README](../../README.md#tech-stack)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Auth.js**.
 > Feature IDs reference [`docs/features.md`](../features.md). Endpoints reference [`docs/api/`](../api/api.md) (index + [`openapi.yaml`](../api/openapi.yaml)). Schema references [`docs/database.md`](../database.md).
 
 ## Requirements restatement
 
 Build a URL shortener with three surfaces:
 
-1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA006`)
+1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA005`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api/`)
 3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC001`–`FC003`, `FC006`)
 
@@ -26,7 +26,6 @@ apps/web (Next.js App Router)
 ├── lib/
 │   ├── db/                   # Prisma client singleton
 │   ├── shortcode/            # base62 encode/decode
-│   ├── ratelimit/            # Redis sliding window
 │   ├── auth/                 # Auth.js config + session helpers
 │   ├── rbac/                 # role presets + permission guard
 │   └── validation/           # zod schemas (URL, body parsing)
@@ -44,8 +43,8 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 - [ ] `create-next-app` (App Router, TypeScript, ESLint).
 - [ ] Add Prettier, stylelint, strict `tsconfig`.
-- [ ] `docker-compose.yml` for local PostgreSQL + Redis.
-- [ ] `.env.example` (DATABASE_URL, REDIS_URL, AUTH_SECRET, GOOGLE_ID/SECRET, SHORT_DOMAIN). Never commit real `.env`.
+- [ ] `docker-compose.yml` for local PostgreSQL.
+- [ ] `.env.example` (DATABASE_URL, AUTH_SECRET, GOOGLE_ID/SECRET, SHORT_DOMAIN). Never commit real `.env`.
 - [ ] Vitest + Playwright config; CI workflow (lint, typecheck, test, build).
 - [ ] **Update CLAUDE.md** "State" section with the real build/test/lint commands once chosen.
 
@@ -101,44 +100,40 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 3. **Complexity:** MEDIUM.
 
-## Phase 5 — Rate limiting (FA006)
+## Phase 5 — CMS foundation & RBAC (FC001, FC002)
 
-- [ ] `lib/ratelimit` Redis sliding window (or token bucket), per-IP.
-- [ ] Apply to anonymous `POST /api/links` before insert; return `429`.
-- [ ] Configurable cap via env.
-
-**Depends on:** Phases 0, 2. **Complexity:** LOW–MEDIUM.
-
-## Phase 6 — CMS foundation & RBAC (FC001, FC002)
-
-- [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard.
+- [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard,
+  per the role × permission matrix in [`features/FC002`](../features/FC002-admin-rbac.md).
 - [ ] `/admin` layout gated server-side; redirect unauthorized.
-- [ ] Dashboard (FC001): KPI cards (total links, links today, users).
-- [ ] `POST /admin/users/:id/role` role assignment (super_admin only).
+- [ ] Dashboard (FC001): KPI cards (total links, links today).
+- [ ] `POST /admin/users/:id/role` role assignment (super_admin only); reject self-demotion and
+  removal of the last super-admin (FC002).
 - [ ] Shorter admin session TTL applied app-side (FC002.3).
+- [ ] Seed the first `super_admin` via migration/seed (bootstrap).
 
 **Depends on:** Phases 1, 3. **Complexity:** MEDIUM–HIGH.
 
-## Phase 7 — CMS link management (FC003)
+## Phase 6 — CMS link management (FC003)
 
-- [ ] `GET /admin/links` — search/filter + metadata + clicks.
+- [ ] `GET /admin/links` — search/filter (incl. owner email) + metadata + clicks.
 - [ ] `POST /admin/links/:id/disable` (+ enable, force-expire) — status-only.
-- [ ] Disabled-link behavior on redirect.
+- [ ] Disabled-link behavior on redirect (`404`); force-expire returns `410`.
 
-**Depends on:** Phase 6. **Complexity:** MEDIUM–HIGH.
+**Depends on:** Phase 5. **Complexity:** MEDIUM–HIGH.
 
-## Phase 8 — User management (FC006)
+## Phase 7 — User management (FC006)
 
 - [ ] User list, suspend/reactivate, view a user's links.
+- [ ] Suspend rejects the user's session (no new link creation/claim); existing links untouched.
 
-**Depends on:** Phases 6–7. **Complexity:** MEDIUM.
+**Depends on:** Phases 5–6. **Complexity:** MEDIUM.
 
-## Phase 9 — Hardening & deploy
+## Phase 8 — Hardening & deploy
 
 - [ ] Security headers + CSP (per web/security rules); CSRF on state-changing forms.
 - [ ] Coverage ≥ 80% (unit + integration + E2E critical flows: create→redirect, sign-in→claim, admin disable).
 - [ ] Lighthouse / CWV pass on public pages.
-- [ ] Production env config; deploy target (Vercel + managed Postgres/Redis or container).
+- [ ] Production env config; deploy target (Vercel + managed Postgres or container).
 - [ ] `security-reviewer` + `code-reviewer` pass.
 
 **Depends on:** all. **Complexity:** MEDIUM.
@@ -149,12 +144,11 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 ```
 P0 → P1 → P2 ──┬─→ P3 → P4
-               ├─→ P5
-               └─→ P6 → P7 → P8
-                              ↘ P9 (gates release)
+               └─→ P5 → P6 → P7
+                              ↘ P8 (gates release)
 ```
 
-**MVP cut line:** P0–P2 (shorten + redirect). **Public product:** + P3–P5. **Full system:** + P6–P9.
+**MVP cut line:** P0–P2 (shorten + redirect). **Public product:** + P3–P4. **Full system:** + P5–P8.
 
 ## Risks
 
@@ -163,7 +157,6 @@ P0 → P1 → P2 ──┬─→ P3 → P4
 | `base62(id)` exposes sequential IDs / enumeration | MEDIUM | Acceptable for MVP; consider salted/hashids if guessability matters |
 | Concurrent `click_count` increments | MEDIUM | Atomic DB increment, not read-modify-write |
 | Anon-claim cookie forgery | MEDIUM | Signed cookie; validate before claim UPDATE |
-| Rate-limit fail-open if Redis down | MEDIUM | Decide fail-open vs fail-closed; alert on Redis loss |
 | Open-redirect / SSRF via stored URL | MEDIUM | http/https only, reject self-referential |
 | RBAC bypass on `/admin` | HIGH | Server-side guard on every route + handler, never client-only |
 
@@ -182,7 +175,7 @@ Still open:
 
 ## Test strategy (per testing rules)
 
-- **Unit:** base62, URL validation, rate-limit window, RBAC presets.
+- **Unit:** base62, URL validation, RBAC presets.
 - **Integration:** API route handlers against test DB.
 - **E2E (Playwright):** create→copy→redirect, expired→410, sign-in→claim, admin disable.
 - TDD: write failing test first per feature; target ≥ 80% coverage.

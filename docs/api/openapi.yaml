@@ -22,17 +22,13 @@ info:
     Admin routes additionally require `role ∈ {admin, super_admin}` with a shorter session TTL
     (FC002.3); checks are by **permission**, not role string (FC002.1).
 
-    **Rate limiting.** `POST /api/links` is throttled per IP (FA006). Responses carry
-    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; over-limit → `429`
-    with `Retry-After`.
-
 servers:
   - url: https://short.example
     description: Production
 
 tags:
   - name: Links (public)
-    description: Create links and read your own history (FA001, FA004, FA006).
+    description: Create links and read your own history (FA001, FA004).
   - name: Redirect
     description: Resolve a short code (FA002, FA005).
   - name: Auth
@@ -58,7 +54,7 @@ paths:
       tags: [Links (public)]
       summary: Create a short link
       description: |
-        Anonymous or authenticated. Rate-limited per IP (FA006).
+        Anonymous or authenticated.
 
         - Accepts `http`/`https` only; rejects malformed and self-referential URLs (FA001.1).
         - `expiresAt` omitted → default TTL (FA005): anonymous = `now + 30d`,
@@ -78,10 +74,6 @@ paths:
       responses:
         '201':
           description: Link created.
-          headers:
-            X-RateLimit-Limit: { $ref: '#/components/headers/X-RateLimit-Limit' }
-            X-RateLimit-Remaining: { $ref: '#/components/headers/X-RateLimit-Remaining' }
-            X-RateLimit-Reset: { $ref: '#/components/headers/X-RateLimit-Reset' }
           content:
             application/json:
               schema:
@@ -98,7 +90,6 @@ paths:
                   expiresAt: '2026-07-12T12:00:00Z'
                 error: null
         '400': { $ref: '#/components/responses/ValidationError' }
-        '429': { $ref: '#/components/responses/RateLimited' }
 
   /api/me/links:
     get:
@@ -277,8 +268,8 @@ paths:
           schema: { $ref: '#/components/schemas/LinkStatus' }
         - name: owner
           in: query
-          description: Filter by owner user id.
-          schema: { type: string }
+          description: Filter by owner email (case-insensitive); matches the email shown in results.
+          schema: { type: string, format: email }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -421,7 +412,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - properties:
-                      data: { $ref: '#/components/schemas/AdminUser' }
+                      data: { $ref: '#/components/schemas/AdminUserDetail' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -558,17 +549,6 @@ components:
       description: User id (cuid).
       schema: { type: string, example: clx7y2k9p0000 }
 
-  headers:
-    X-RateLimit-Limit:
-      description: Request cap in the current window.
-      schema: { type: integer }
-    X-RateLimit-Remaining:
-      description: Remaining requests in the current window.
-      schema: { type: integer }
-    X-RateLimit-Reset:
-      description: Unix epoch (seconds) when the window resets.
-      schema: { type: integer }
-
   responses:
     ValidationError:
       description: Invalid input (FA001.1, FA005).
@@ -606,19 +586,6 @@ components:
             success: false
             data: null
             error: { code: NOT_FOUND, message: Not found }
-    RateLimited:
-      description: Per-IP cap exceeded (FA006). No record created.
-      headers:
-        Retry-After:
-          description: Seconds until the caller may retry.
-          schema: { type: integer }
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
-          example:
-            success: false
-            data: null
-            error: { code: RATE_LIMITED, message: Too many requests }
     AdminLinkOk:
       description: Updated link.
       content:
@@ -672,7 +639,7 @@ components:
           properties:
             code:
               type: string
-              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, GONE, RATE_LIMITED, INTERNAL]
+              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, GONE, INTERNAL]
             message: { type: string }
     PageMeta:
       type: object
@@ -708,11 +675,17 @@ components:
         expiresAt: { type: [string, 'null'], format: date-time }
     MyLink:
       type: object
+      description: |
+        A link in the owner's history (FA004). The owner resolves three states: `active`,
+        `disabled` (stored `status`, set by an admin via FC003), and `expired` (derived when
+        `expiresAt` is in the past). The public redirect still returns `404` for disabled links.
       properties:
         code: { type: string, example: a1B2c }
         originalUrl: { type: string, format: uri }
         clickCount: { type: integer, example: 42 }
-        status: { $ref: '#/components/schemas/LinkStatus' }
+        status:
+          allOf: [{ $ref: '#/components/schemas/LinkStatus' }]
+          description: Stored status (`active`/`disabled`); `expired` is derived from `expiresAt`.
         expiresAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
     AdminLinkRow:
@@ -731,13 +704,20 @@ components:
         createdAt: { type: string, format: date-time }
     AdminUser:
       type: object
+      description: User row for list/mutation responses. `linkCount` is omitted here to avoid a per-row COUNT; see AdminUserDetail.
       properties:
         id: { type: string, example: clx7y2k9p0000 }
         email: { type: string, format: email }
         role: { $ref: '#/components/schemas/UserRole' }
         status: { $ref: '#/components/schemas/UserStatus' }
-        linkCount: { type: integer, example: 12 }
         createdAt: { type: string, format: date-time }
+    AdminUserDetail:
+      description: User detail (GET /admin/users/{id}); adds the owned-link count.
+      allOf:
+        - $ref: '#/components/schemas/AdminUser'
+        - type: object
+          properties:
+            linkCount: { type: integer, example: 12 }
     Stats:
       type: object
       properties:
