@@ -82,10 +82,10 @@ A code resolves to one of four outcomes:
   new links or claim anonymous ones.
 - Suspension does **not** take down their existing links. Redirect resolution checks only the
   link's own `status` + expiry, not the owner — so prior links keep resolving. To pull them
-  offline, an admin disables the links individually (see [`features/FC003`](features/FC003-link-management.md)).
+  offline, an admin disables the links individually (see [`features/FC-LINKS`](features/FC-LINKS-link-management.md)).
 
 ## CMS permissions
 
 - Enforce permissions server-side for all `/admin` endpoints.
 - Use role presets rather than scattered role checks. The canonical role × permission matrix
-  lives in [`features/FC002`](features/FC002-admin-rbac.md).
+  lives in [`features/FC-RBAC`](features/FC-RBAC-admin-rbac.md).

@@ -26,22 +26,22 @@ User-facing functionality:
 
 ## Planned Features
 
-See [`docs/features.md`](docs/features.md) for the full two-tier feature map (`FAxxx` App/Web · `FCxxx` CMS).
+See [`docs/features.md`](docs/features.md) for the full two-tier feature map (`FA-<NAME>` App/Web · `FC-<NAME>` CMS).
 
 ### App / Web
 
-- [ ] **FA001** — Create short link (validation · code-gen · quick copy · QR code)
-- [ ] **FA002** — Redirect short code (click count · 410 expired · 404)
-- [ ] **FA003** — Google sign-in (OAuth · anonymous link claim)
-- [ ] **FA004** — Link history (list own links)
-- [ ] **FA005** — Link expiration / TTL (anon 30d · user permanent · custom expiry date)
+- [ ] **FA-SHORTEN** — Create short link (validation · code-gen · quick copy · QR code)
+- [ ] **FA-REDIRECT** — Redirect short code (click count · 410 expired · 404)
+- [ ] **FA-SIGNIN** — Google sign-in (OAuth · anonymous link claim)
+- [ ] **FA-HISTORY** — Link history (list own links)
+- [ ] **FA-EXPIRY** — Link expiration / TTL (anon 30d · user permanent · custom expiry date)
 
 ### CMS
 
-- [ ] **FC001** — Admin dashboard (KPIs)
-- [ ] **FC002** — RBAC / permissions (presets · role assignment · admin session hardening)
-- [ ] **FC003** — Link management (search · disable/enable · force-expire · clicks)
-- [ ] **FC006** — User management (list · suspend · view links)
+- [ ] **FC-DASH** — Admin dashboard (KPIs)
+- [ ] **FC-RBAC** — RBAC / permissions (presets · role assignment · admin session hardening)
+- [ ] **FC-LINKS** — Link management (search · disable/enable · force-expire · clicks)
+- [ ] **FC-USERS** — User management (list · suspend · view links)
 
 ### Out of scope
 

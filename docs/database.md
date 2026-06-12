@@ -1,7 +1,7 @@
 // URL Shortener — database schema (DBML)
 // Derived from docs/features.md. Stack: PostgreSQL + Prisma + Auth.js.
 //
-// Minimal in-scope schema: FA001–FA005, FC001–FC003, FC006.
+// Minimal in-scope schema: FA-SHORTEN–FA-EXPIRY, FC-DASH–FC-LINKS, FC-USERS.
 // Render at https://dbdiagram.io or with `@dbml/cli`.
 
 Project url_shortener {
@@ -33,7 +33,7 @@ Enum link_status {
 // Identity & auth
 //============================================================
 
-// Application user + role/permission anchor (FA003, FC002, FC006).
+// Application user + role/permission anchor (FA-SIGNIN, FC-RBAC, FC-USERS).
 // Provider identity lives in `accounts`, never here (multi-provider ready).
 // Trimmed to fields the app reads: no name/image/email_verified profile mirror
 // (sign-in only — never displayed; `email` is the identity shown in CMS).
@@ -41,17 +41,17 @@ Enum link_status {
 // `name`/`image`/`emailVerified` before insert, else Prisma rejects them.
 Table users {
   id          text [pk, note: 'cuid (Auth.js)']
-  email       citext [unique, not null, note: 'case-insensitive; identity + admin search (FC006.1)']
-  role        user_role [not null, default: 'user', note: 'FC002.1']
-  status      user_status [not null, default: 'active', note: 'FC006.2; suspended = session rejected (no link creation/claim); existing links unaffected']
-  created_at  timestamptz [not null, default: `now()`, note: 'user-list ordering (FC006.1)']
+  email       citext [unique, not null, note: 'case-insensitive; identity + admin search (FC-USERS.1)']
+  role        user_role [not null, default: 'user', note: 'FC-RBAC.1']
+  status      user_status [not null, default: 'active', note: 'FC-USERS.2; suspended = session rejected (no link creation/claim); existing links unaffected']
+  created_at  timestamptz [not null, default: `now()`, note: 'user-list ordering (FC-USERS.1)']
 
   Indexes {
     role [note: 'admin filtering']
   }
 }
 
-// Auth.js adapter — one row per linked OAuth identity (FA003).
+// Auth.js adapter — one row per linked OAuth identity (FA-SIGNIN).
 // (provider, provider_account_id) replaces the old google_sub.
 // Sign-in only: we never call Google APIs, so the provider token columns
 // (access_token, refresh_token, id_token, expires_at, token_type, scope,
@@ -71,7 +71,7 @@ Table accounts {
   }
 }
 
-// Auth.js adapter. Admin sessions get a shorter `expires`, applied app-side (FC002.3 hardening).
+// Auth.js adapter. Admin sessions get a shorter `expires`, applied app-side (FC-RBAC.3 hardening).
 Table sessions {
   id            text [pk]
   session_token text [unique, not null]
@@ -83,26 +83,26 @@ Table sessions {
 // Core link domain
 //============================================================
 
-// Source of truth for the short code and every redirect (FA001, FA002, FA004, FA005, FC003).
+// Source of truth for the short code and every redirect (FA-SHORTEN, FA-REDIRECT, FA-HISTORY, FA-EXPIRY, FC-LINKS).
 // Insert row -> UPDATE code = base62(id) in the same transaction.
 // Resolved state is derived, never stored: active iff
 //   status='active' AND (expires_at IS NULL OR expires_at > now()).
 Table links {
-  id              bigint [pk, increment, note: 'identity; base62 source (FA001.2)']
+  id              bigint [pk, increment, note: 'identity; base62 source (FA-SHORTEN.2)']
   code            text [unique, not null, note: 'base62(id), stored on insert']
-  original_url    text [not null, note: 'validated http(s), non-self-referential (FA001.1)']
+  original_url    text [not null, note: 'validated http(s), non-self-referential (FA-SHORTEN.1)']
   user_id         text [ref: > users.id, note: 'null = anonymous link']
-  anon_session_id text [note: 'signed session id, for claim-on-sign-in (FA003.2)']
-  expires_at      timestamptz [note: 'null = permanent; default rules in FA005']
-  click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA002.1)']
-  status          link_status [not null, default: 'active', note: 'FC003.2; disable = status-only, no reason/actor stored']
-  created_at      timestamptz [not null, default: `now()`, note: 'history order (FA004), shown in lists']
+  anon_session_id text [note: 'signed session id, for claim-on-sign-in (FA-SIGNIN.2)']
+  expires_at      timestamptz [note: 'null = permanent; default rules in FA-EXPIRY']
+  click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA-REDIRECT.1)']
+  status          link_status [not null, default: 'active', note: 'FC-LINKS.2; disable = status-only, no reason/actor stored']
+  created_at      timestamptz [not null, default: `now()`, note: 'history order (FA-HISTORY), shown in lists']
 
   Indexes {
-    (user_id, created_at) [note: 'history, FA004 (desc)']
-    anon_session_id [note: 'claim, FA003.2 (where not null)']
-    expires_at [note: 'TTL sweeps, FA005 (where not null)']
-    status [note: 'admin filter/search, FC003.1 (pair pg_trgm on code/original_url)']
+    (user_id, created_at) [note: 'history, FA-HISTORY (desc)']
+    anon_session_id [note: 'claim, FA-SIGNIN.2 (where not null)']
+    expires_at [note: 'TTL sweeps, FA-EXPIRY (where not null)']
+    status [note: 'admin filter/search, FC-LINKS.1 (pair pg_trgm on code/original_url)']
   }
 }
 

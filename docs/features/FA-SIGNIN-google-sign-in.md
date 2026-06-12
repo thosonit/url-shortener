@@ -1,4 +1,4 @@
-# FA003 — Google sign-in
+# FA-SIGNIN — Google sign-in
 
 ## Purpose
 Let users optionally sign in with Google to own and manage their links.
@@ -11,10 +11,10 @@ Let users optionally sign in with Google to own and manage their links.
 ## Sub-features
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
-| FA003.1 | OAuth flow + user upsert | Sign in with Google; resolve identity via `accounts(provider='google', provider_account_id=sub)` → linked `users` row (create both on first sign-in); establish an authenticated session. Provider identity lives in `accounts`, not on `users` — see [[database]]. |
-| FA003.2 | Anonymous link claim | On first sign-in, assign `user_id` and clear `expires_at` for links carrying the visitor's `anon_session_id`. |
+| FA-SIGNIN.1 | OAuth flow + user upsert | Sign in with Google; resolve identity via `accounts(provider='google', provider_account_id=sub)` → linked `users` row (create both on first sign-in); establish an authenticated session. Provider identity lives in `accounts`, not on `users` — see [[database]]. |
+| FA-SIGNIN.2 | Anonymous link claim | On first sign-in, assign `user_id` and clear `expires_at` for links carrying the visitor's `anon_session_id`. |
 
-## Claim mechanism (FA003.2)
+## Claim mechanism (FA-SIGNIN.2)
 Each visitor holds a signed `anon_session_id` cookie; anonymous links store it. On first sign-in:
 ```sql
 UPDATE links
@@ -23,17 +23,17 @@ WHERE anon_session_id = :anonId AND user_id IS NULL;
 ```
 
 `expires_at` is cleared **unconditionally** — by design. Even if the visitor set a custom
-expiry while anonymous (capped ≤ 30 days, [[FA005]]), claiming the link makes it permanent;
+expiry while anonymous (capped ≤ 30 days, [[FA-EXPIRY]]), claiming the link makes it permanent;
 the earlier anonymous expiry choice is intentionally discarded, not preserved.
 
 ## Acceptance criteria
-- Users can sign in with Google (FA003.1).
-- Anonymous links from the current session are claimed on sign-in and become permanent (FA003.2).
-- After claim, the links appear in history ([[FA004]]).
+- Users can sign in with Google (FA-SIGNIN.1).
+- Anonymous links from the current session are claimed on sign-in and become permanent (FA-SIGNIN.2).
+- After claim, the links appear in history ([[FA-HISTORY]]).
 
 ## Related API
 - `GET /api/auth/signin/google` → begin OAuth (Auth.js)
 - `GET /api/auth/callback/google` → upsert identity, establish session, trigger claim
 
 ## Related
-- Claim flips TTL handled by [[FA005]]; claimed links surface in [[FA004]].
+- Claim flips TTL handled by [[FA-EXPIRY]]; claimed links surface in [[FA-HISTORY]].

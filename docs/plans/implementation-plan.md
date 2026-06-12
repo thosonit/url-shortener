@@ -8,9 +8,9 @@
 
 Build a URL shortener with three surfaces:
 
-1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA005`)
+1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA-SHORTEN`–`FA-EXPIRY`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api/`)
-3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC001`–`FC003`, `FC006`)
+3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC-DASH`–`FC-LINKS`, `FC-USERS`)
 
 The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled).
 
@@ -65,7 +65,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 0. **Complexity:** LOW–MEDIUM.
 
-## Phase 2 — Core: create + redirect (FA001, FA002)
+## Phase 2 — Core: create + redirect (FA-SHORTEN, FA-REDIRECT)
 
 **Goal:** the two operations end to end. This is the MVP spine.
 
@@ -74,12 +74,12 @@ Repository pattern for data access; consistent API response envelope (`{ success
 - [ ] `POST /api/links`: validate → insert → `code = base62(id)` → return `{ code, shortUrl, expiresAt }`.
 - [ ] `GET /[code]`: lookup → **302** active · **410** expired · **404** missing/disabled.
   On success: atomic `click_count += 1`.
-- [ ] Create-link UI: input, result with short URL, **copy** action, **QR code** (FA001.x).
+- [ ] Create-link UI: input, result with short URL, **copy** action, **QR code** (FA-SHORTEN.x).
 - [ ] Expired (410) friendly page; 404 page for missing/disabled.
 
 **Depends on:** Phase 1. **Complexity:** MEDIUM. **This phase alone is a usable product.**
 
-## Phase 3 — Auth & history (FA003, FA004)
+## Phase 3 — Auth & history (FA-SIGNIN, FA-HISTORY)
 
 - [ ] Auth.js with Google provider; identity via `accounts(provider, provider_account_id)` → `User` upsert.
 - [ ] Override adapter `linkAccount` (strip provider token fields: `access_token`, `refresh_token`,
@@ -91,7 +91,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phases 1–2. **Complexity:** MEDIUM.
 
-## Phase 4 — Expiration & anonymous claim (FA005)
+## Phase 4 — Expiration & anonymous claim (FA-EXPIRY)
 
 - [ ] Anonymous: `expires_at = created_at + 30d`; authenticated: nullable (permanent); custom future date for authed.
 - [ ] Signed `anon_session_id` cookie set for anonymous creators.
@@ -100,20 +100,20 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 3. **Complexity:** MEDIUM.
 
-## Phase 5 — CMS foundation & RBAC (FC001, FC002)
+## Phase 5 — CMS foundation & RBAC (FC-DASH, FC-RBAC)
 
 - [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard,
-  per the role × permission matrix in [`features/FC002`](../features/FC002-admin-rbac.md).
+  per the role × permission matrix in [`features/FC-RBAC`](../features/FC-RBAC-admin-rbac.md).
 - [ ] `/admin` layout gated server-side; redirect unauthorized.
-- [ ] Dashboard (FC001): KPI cards (total links, links today).
+- [ ] Dashboard (FC-DASH): KPI cards (total links, links today).
 - [ ] `POST /admin/users/:id/role` role assignment (super_admin only); reject self-demotion and
-  removal of the last super-admin (FC002).
-- [ ] Shorter admin session TTL applied app-side (FC002.3).
+  removal of the last super-admin (FC-RBAC).
+- [ ] Shorter admin session TTL applied app-side (FC-RBAC.3).
 - [ ] Seed the first `super_admin` via migration/seed (bootstrap).
 
 **Depends on:** Phases 1, 3. **Complexity:** MEDIUM–HIGH.
 
-## Phase 6 — CMS link management (FC003)
+## Phase 6 — CMS link management (FC-LINKS)
 
 - [ ] `GET /admin/links` — search/filter (incl. owner email) + metadata + clicks.
 - [ ] `POST /admin/links/:id/disable` (+ enable, force-expire) — status-only.
@@ -121,7 +121,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 5. **Complexity:** MEDIUM–HIGH.
 
-## Phase 7 — User management (FC006)
+## Phase 7 — User management (FC-USERS)
 
 - [ ] User list, suspend/reactivate, view a user's links.
 - [ ] Suspend rejects the user's session (no new link creation/claim); existing links untouched.

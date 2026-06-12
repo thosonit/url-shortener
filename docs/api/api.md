@@ -4,7 +4,7 @@ REST surface for the URL shortener, derived from [`features.md`](../features.md)
 contract in [`database.md`](../database.md). Two surfaces:
 
 - **App / Public** (`/api/*`, `/:code`) — anonymous or user session.
-- **CMS / Admin** (`/admin/*`) — admin+ permission, enforced server-side (FC002).
+- **CMS / Admin** (`/admin/*`) — admin+ permission, enforced server-side (FC-RBAC).
 
 > **Per-endpoint contract → Swagger.** This page is the index: conventions, auth, and the
 > endpoint list. Full request/response schemas, status codes, and examples live in the
@@ -29,10 +29,10 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 
 **Auth.**
 - _Anonymous_ — a signed `anon_session_id` cookie is issued on first visit; it ties anonymous
-  links to the browser for later claim (FA003.2).
+  links to the browser for later claim (FA-SIGNIN.2).
 - _User session_ — Auth.js session cookie. Required by `/api/me/*`.
-- _Admin_ — `role ∈ {admin, super_admin}` plus a shorter session TTL (FC002.3). Required by all
-  `/admin/*`. Checks are by **permission**, not role string (FC002.1).
+- _Admin_ — `role ∈ {admin, super_admin}` plus a shorter session TTL (FC-RBAC.3). Required by all
+  `/admin/*`. Checks are by **permission**, not role string (FC-RBAC.1).
 
 **Errors.** Common `error.code` values: `VALIDATION_ERROR` (400), `UNAUTHENTICATED` (401),
 `FORBIDDEN` (403), `NOT_FOUND` (404), `GONE` (410), `INTERNAL` (500).
@@ -45,35 +45,35 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 
 | Method | Path | Auth | Feature | Purpose |
 |--------|------|------|---------|---------|
-| `POST` | `/api/links` | anon / user | FA001 | Create a short link |
-| `GET` | `/:code` | none | FA002, FA005, FC003 | Resolve & redirect |
-| `GET` | `/api/me/links` | user | FA004 | List own link history |
+| `POST` | `/api/links` | anon / user | FA-SHORTEN | Create a short link |
+| `GET` | `/:code` | none | FA-REDIRECT, FA-EXPIRY, FC-LINKS | Resolve & redirect |
+| `GET` | `/api/me/links` | user | FA-HISTORY | List own link history |
 
 ### Auth & account
 
 | Method | Path | Auth | Feature | Purpose |
 |--------|------|------|---------|---------|
-| `GET` | `/api/auth/signin/google` | none | FA003.1 | Begin Google OAuth |
-| `GET` | `/api/auth/callback/google` | none | FA003 | OAuth callback + anon-link claim |
-| `GET` | `/api/auth/session` | any | FA003 | Current session |
-| `POST` | `/api/auth/signout` | user | FA003 | End session |
+| `GET` | `/api/auth/signin/google` | none | FA-SIGNIN.1 | Begin Google OAuth |
+| `GET` | `/api/auth/callback/google` | none | FA-SIGNIN | OAuth callback + anon-link claim |
+| `GET` | `/api/auth/session` | any | FA-SIGNIN | Current session |
+| `POST` | `/api/auth/signout` | user | FA-SIGNIN | End session |
 
 ### CMS / Admin
 
 | Method | Path | Permission | Feature | Purpose |
 |--------|------|-----------|---------|---------|
-| `GET` | `/admin/stats` | `dashboard:read` | FC001.1 | KPI snapshot |
-| `GET` | `/admin/links` | `link:read` | FC003.1 | Search / filter links |
-| `GET` | `/admin/links/:id` | `link:read` | FC003.4 | Link detail + clicks |
-| `POST` | `/admin/links/:id/disable` | `link:disable` | FC003.2 | Disable a link |
-| `POST` | `/admin/links/:id/enable` | `link:disable` | FC003.2 | Re-enable a link |
-| `POST` | `/admin/links/:id/expire` | `link:expire` | FC003.3 | Force-expire now |
-| `GET` | `/admin/users` | `user:read` | FC006.1 | List / search users |
-| `GET` | `/admin/users/:id` | `user:read` | FC006 | User detail |
-| `GET` | `/admin/users/:id/links` | `user:read` | FC006.3 | Links owned by user |
-| `POST` | `/admin/users/:id/suspend` | `user:suspend` | FC006.2 | Suspend account |
-| `POST` | `/admin/users/:id/unsuspend` | `user:suspend` | FC006.2 | Reinstate account |
-| `POST` | `/admin/users/:id/role` | `role:assign` (super-admin) | FC002.2 | Assign role |
+| `GET` | `/admin/stats` | `dashboard:read` | FC-DASH.1 | KPI snapshot |
+| `GET` | `/admin/links` | `link:read` | FC-LINKS.1 | Search / filter links |
+| `GET` | `/admin/links/:id` | `link:read` | FC-LINKS.4 | Link detail + clicks |
+| `POST` | `/admin/links/:id/disable` | `link:disable` | FC-LINKS.2 | Disable a link |
+| `POST` | `/admin/links/:id/enable` | `link:disable` | FC-LINKS.2 | Re-enable a link |
+| `POST` | `/admin/links/:id/expire` | `link:expire` | FC-LINKS.3 | Force-expire now |
+| `GET` | `/admin/users` | `user:read` | FC-USERS.1 | List / search users |
+| `GET` | `/admin/users/:id` | `user:read` | FC-USERS | User detail |
+| `GET` | `/admin/users/:id/links` | `user:read` | FC-USERS.3 | Links owned by user |
+| `POST` | `/admin/users/:id/suspend` | `user:suspend` | FC-USERS.2 | Suspend account |
+| `POST` | `/admin/users/:id/unsuspend` | `user:suspend` | FC-USERS.2 | Reinstate account |
+| `POST` | `/admin/users/:id/role` | `role:assign` (super-admin) | FC-RBAC.2 | Assign role |
 
 ---
 

@@ -1,4 +1,4 @@
-# FC001 — Admin dashboard
+# FC-DASH — Admin dashboard
 
 ## Purpose
 Give admins a centralized operational overview at a glance.
@@ -10,11 +10,11 @@ Give admins a centralized operational overview at a glance.
 ## Sub-features
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
-| FC001.1 | KPIs | Total links, links today. |
+| FC-DASH.1 | KPIs | Total links, links today. |
 
 ## Acceptance criteria
-- Admins see system-health metrics at a glance (FC001.1).
+- Admins see system-health metrics at a glance (FC-DASH.1).
 - Dashboard links to link management and users.
 
 ## Related
-- Feeds from [[FC003]], [[FC006]]. Gated by [[FC002]].
+- Feeds from [[FC-LINKS]], [[FC-USERS]]. Gated by [[FC-RBAC]].

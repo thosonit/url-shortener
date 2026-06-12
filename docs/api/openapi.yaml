@@ -7,7 +7,7 @@ info:
     REST surface for the URL shortener. Two surfaces:
 
     - **App / Public** (`/api/*`, `/{code}`) — anonymous or user session.
-    - **CMS / Admin** (`/admin/*`) — admin+ permission, enforced server-side (FC002).
+    - **CMS / Admin** (`/admin/*`) — admin+ permission, enforced server-side (FC-RBAC).
 
     Derived from `features.md` and the data contract in `database.md`.
 
@@ -18,9 +18,9 @@ info:
     **Pagination.** List endpoints accept `page` (1-based) and `limit` (default 20, max 100).
 
     **Auth.** Anonymous visitors get a signed `anon_session_id` cookie (ties links to the
-    browser for later claim, FA003.2). Users authenticate via an Auth.js session cookie.
+    browser for later claim, FA-SIGNIN.2). Users authenticate via an Auth.js session cookie.
     Admin routes additionally require `role ∈ {admin, super_admin}` with a shorter session TTL
-    (FC002.3); checks are by **permission**, not role string (FC002.1).
+    (FC-RBAC.3); checks are by **permission**, not role string (FC-RBAC.1).
 
 servers:
   - url: https://short.example
@@ -28,17 +28,17 @@ servers:
 
 tags:
   - name: Links (public)
-    description: Create links and read your own history (FA001, FA004).
+    description: Create links and read your own history (FA-SHORTEN, FA-HISTORY).
   - name: Redirect
-    description: Resolve a short code (FA002, FA005).
+    description: Resolve a short code (FA-REDIRECT, FA-EXPIRY).
   - name: Auth
-    description: Auth.js Google OAuth + anonymous-link claim (FA003).
+    description: Auth.js Google OAuth + anonymous-link claim (FA-SIGNIN).
   - name: Admin · Dashboard
-    description: KPI snapshot (FC001).
+    description: KPI snapshot (FC-DASH).
   - name: Admin · Links
-    description: Search and moderate links (FC003).
+    description: Search and moderate links (FC-LINKS).
   - name: Admin · Users
-    description: Browse users and manage accounts/roles (FC002, FC006).
+    description: Browse users and manage accounts/roles (FC-RBAC, FC-USERS).
 
 security:
   - {}                      # most public reads need no auth
@@ -56,11 +56,11 @@ paths:
       description: |
         Anonymous or authenticated.
 
-        - Accepts `http`/`https` only; rejects malformed and self-referential URLs (FA001.1).
-        - `expiresAt` omitted → default TTL (FA005): anonymous = `now + 30d`,
+        - Accepts `http`/`https` only; rejects malformed and self-referential URLs (FA-SHORTEN.1).
+        - `expiresAt` omitted → default TTL (FA-EXPIRY): anonymous = `now + 30d`,
           authenticated = permanent (`null`).
         - `expiresAt` supplied → anonymous is clamped to ≤ 30 days; authenticated is any future date.
-        - `code` is server-generated as `base62(links.id)` — never client-supplied (FA001.2).
+        - `code` is server-generated as `base62(links.id)` — never client-supplied (FA-SHORTEN.2).
       operationId: createLink
       security:
         - {}
@@ -95,7 +95,7 @@ paths:
     get:
       tags: [Links (public)]
       summary: List own link history
-      description: Authenticated user's link history (FA004). Returns only links owned by the caller.
+      description: Authenticated user's link history (FA-HISTORY). Returns only links owned by the caller.
       operationId: listMyLinks
       security:
         - sessionCookie: []
@@ -138,7 +138,7 @@ paths:
         `302` (not `301`) is deliberate: a cached permanent redirect would bypass the server and
         break per-click counting. Disabled links return `404` (not `410`) so a takedown does not
         confirm the code ever existed. On a successful redirect only: increment
-        `links.click_count` (FA002.1).
+        `links.click_count` (FA-REDIRECT.1).
       operationId: resolveCode
       security:
         - {}
@@ -156,9 +156,9 @@ paths:
               description: The original URL.
               schema: { type: string, format: uri }
         '404':
-          description: Unknown code (FA002.3) or disabled link (FC003.2).
+          description: Unknown code (FA-REDIRECT.3) or disabled link (FC-LINKS.2).
         '410':
-          description: Expired link — "Link expired" page (FA005.3).
+          description: Expired link — "Link expired" page (FA-EXPIRY.3).
 
   #============================================================
   # Auth & account
@@ -168,7 +168,7 @@ paths:
     get:
       tags: [Auth]
       summary: Begin Google OAuth
-      description: Auth.js Google OAuth flow (FA003.1).
+      description: Auth.js Google OAuth flow (FA-SIGNIN.1).
       operationId: signinGoogle
       security:
         - {}
@@ -183,7 +183,7 @@ paths:
       description: |
         The callback upserts the user via `accounts(provider='google', provider_account_id=sub)`
         → user (else create), establishes a session, and **claims anonymous links** for the
-        visitor's `anon_session_id` (FA003.2):
+        visitor's `anon_session_id` (FA-SIGNIN.2):
 
         ```sql
         UPDATE links SET user_id = :userId, expires_at = NULL
@@ -229,7 +229,7 @@ paths:
     get:
       tags: [Admin · Dashboard]
       summary: KPI snapshot
-      description: 'Requires permission `dashboard:read` (FC001.1).'
+      description: 'Requires permission `dashboard:read` (FC-DASH.1).'
       operationId: adminStats
       security:
         - sessionCookie: []
@@ -254,7 +254,7 @@ paths:
     get:
       tags: [Admin · Links]
       summary: Search / filter links
-      description: 'Requires permission `link:read` (FC003.1). Search by code/URL/owner/status.'
+      description: 'Requires permission `link:read` (FC-LINKS.1). Search by code/URL/owner/status.'
       operationId: adminListLinks
       security:
         - sessionCookie: []
@@ -292,7 +292,7 @@ paths:
     get:
       tags: [Admin · Links]
       summary: Link detail + clicks
-      description: 'Requires permission `link:read` (FC003.4).'
+      description: 'Requires permission `link:read` (FC-LINKS.4).'
       operationId: adminGetLink
       security:
         - sessionCookie: []
@@ -317,8 +317,8 @@ paths:
       tags: [Admin · Links]
       summary: Disable a link
       description: |
-        Requires permission `link:disable` (FC003.2). Sets `status='disabled'`;
-        disabled links stop resolving (FA002).
+        Requires permission `link:disable` (FC-LINKS.2). Sets `status='disabled'`;
+        disabled links stop resolving (FA-REDIRECT).
       operationId: adminDisableLink
       security:
         - sessionCookie: []
@@ -334,7 +334,7 @@ paths:
     post:
       tags: [Admin · Links]
       summary: Re-enable a link
-      description: "Requires permission `link:disable` (FC003.2). Restores `status='active'`."
+      description: "Requires permission `link:disable` (FC-LINKS.2). Restores `status='active'`."
       operationId: adminEnableLink
       security:
         - sessionCookie: []
@@ -350,7 +350,7 @@ paths:
     post:
       tags: [Admin · Links]
       summary: Force-expire now
-      description: 'Requires permission `link:expire` (FC003.3). Sets `expires_at = now()` to retire immediately.'
+      description: 'Requires permission `link:expire` (FC-LINKS.3). Sets `expires_at = now()` to retire immediately.'
       operationId: adminExpireLink
       security:
         - sessionCookie: []
@@ -366,7 +366,7 @@ paths:
     get:
       tags: [Admin · Users]
       summary: List / search users
-      description: 'Requires permission `user:read` (FC006.1).'
+      description: 'Requires permission `user:read` (FC-USERS.1).'
       operationId: adminListUsers
       security:
         - sessionCookie: []
@@ -397,7 +397,7 @@ paths:
     get:
       tags: [Admin · Users]
       summary: User detail
-      description: 'Requires permission `user:read` (FC006). Role, status, link count.'
+      description: 'Requires permission `user:read` (FC-USERS). Role, status, link count.'
       operationId: adminGetUser
       security:
         - sessionCookie: []
@@ -421,7 +421,7 @@ paths:
     get:
       tags: [Admin · Users]
       summary: Links owned by user
-      description: 'Requires permission `user:read` (FC006.3).'
+      description: 'Requires permission `user:read` (FC-USERS.3).'
       operationId: adminGetUserLinks
       security:
         - sessionCookie: []
@@ -451,7 +451,7 @@ paths:
       tags: [Admin · Users]
       summary: Suspend account
       description: |
-        Requires permission `user:suspend` (FC006.2). Sets `status='suspended'`;
+        Requires permission `user:suspend` (FC-USERS.2). Sets `status='suspended'`;
         blocks the account's privileged actions.
       operationId: adminSuspendUser
       security:
@@ -476,7 +476,7 @@ paths:
     post:
       tags: [Admin · Users]
       summary: Reinstate account
-      description: "Requires permission `user:suspend` (FC006.2). Restores `status='active'`."
+      description: "Requires permission `user:suspend` (FC-USERS.2). Restores `status='active'`."
       operationId: adminUnsuspendUser
       security:
         - sessionCookie: []
@@ -492,7 +492,7 @@ paths:
     post:
       tags: [Admin · Users]
       summary: Assign role
-      description: '**Super-admin only** (`role:assign`, FC002.2).'
+      description: '**Super-admin only** (`role:assign`, FC-RBAC.2).'
       operationId: adminAssignRole
       security:
         - sessionCookie: []
@@ -523,7 +523,7 @@ components:
       name: authjs.session-token
       description: |
         Auth.js session cookie. Admin routes additionally require an admin+ role and enforce
-        permission checks server-side (FC002).
+        permission checks server-side (FC-RBAC).
 
   parameters:
     Page:
@@ -551,7 +551,7 @@ components:
 
   responses:
     ValidationError:
-      description: Invalid input (FA001.1, FA005).
+      description: Invalid input (FA-SHORTEN.1, FA-EXPIRY).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorEnvelope' }
@@ -569,7 +569,7 @@ components:
             data: null
             error: { code: UNAUTHENTICATED, message: Sign-in required }
     Forbidden:
-      description: Authenticated but lacks the required permission (FC002).
+      description: Authenticated but lacks the required permission (FC-RBAC).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorEnvelope' }
@@ -610,7 +610,7 @@ components:
     LinkStatus:
       type: string
       enum: [active, disabled]
-      description: Stored link status (FC003.2). Resolved state also factors in expiry (FA005).
+      description: Stored link status (FC-LINKS.2). Resolved state also factors in expiry (FA-EXPIRY).
     UserRole:
       type: string
       enum: [user, admin, super_admin]
@@ -657,14 +657,14 @@ components:
         url:
           type: string
           format: uri
-          description: Long URL to shorten. `http`/`https` only, non-self-referential (FA001.1).
+          description: Long URL to shorten. `http`/`https` only, non-self-referential (FA-SHORTEN.1).
           example: https://example.com/very/long/path
         expiresAt:
           type: [string, 'null']
           format: date-time
           description: |
             Optional. Anonymous callers are clamped to ≤ 30 days; authenticated callers may set
-            any future date. Omitted → default TTL (FA005).
+            any future date. Omitted → default TTL (FA-EXPIRY).
           example: '2026-07-01T00:00:00Z'
     CreatedLink:
       type: object
@@ -676,8 +676,8 @@ components:
     MyLink:
       type: object
       description: |
-        A link in the owner's history (FA004). The owner resolves three states: `active`,
-        `disabled` (stored `status`, set by an admin via FC003), and `expired` (derived when
+        A link in the owner's history (FA-HISTORY). The owner resolves three states: `active`,
+        `disabled` (stored `status`, set by an admin via FC-LINKS), and `expired` (derived when
         `expiresAt` is in the past). The public redirect still returns `404` for disabled links.
       properties:
         code: { type: string, example: a1B2c }
