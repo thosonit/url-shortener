@@ -4,14 +4,14 @@
 Let users optionally sign in with Google to own and manage their links.
 
 ## Summary
-- Provide a Google OAuth sign-in flow.
-- Create or update a user from the Google profile, then establish a session.
+- Provide a Google OAuth sign-in flow (Auth.js).
+- Resolve identity via the `accounts` table, upsert the linked `users` row, then establish a session.
 - On first sign-in within a session, claim the anonymous links created in that session.
 
 ## Sub-features
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
-| FA003.1 | OAuth flow + user upsert | Sign in with Google; upsert `users` by `google_sub`; establish an authenticated session. |
+| FA003.1 | OAuth flow + user upsert | Sign in with Google; resolve identity via `accounts(provider='google', provider_account_id=sub)` → linked `users` row (create both on first sign-in); establish an authenticated session. Provider identity lives in `accounts`, not on `users` — see [[database]]. |
 | FA003.2 | Anonymous link claim | On first sign-in, assign `user_id` and clear `expires_at` for links carrying the visitor's `anon_session_id`. |
 
 ## Claim mechanism (FA003.2)
@@ -28,7 +28,8 @@ WHERE anon_session_id = :anonId AND user_id IS NULL;
 - After claim, the links appear in history ([[FA004]]).
 
 ## Related API
-- `POST /api/auth/google` + callback → establish session, trigger claim
+- `GET /api/auth/signin/google` → begin OAuth (Auth.js)
+- `GET /api/auth/callback/google` → upsert identity, establish session, trigger claim
 
 ## Related
 - Claim flips TTL handled by [[FA005]]; claimed links surface in [[FA004]].

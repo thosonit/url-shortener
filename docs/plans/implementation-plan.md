@@ -78,8 +78,8 @@ Repository pattern for data access; consistent API response envelope (`{ data, e
 
 ## Phase 3 — Auth & history (FA003, FA004)
 
-- [ ] Auth.js with Google provider; `User` upsert on `google_sub`.
-- [ ] `POST /api/auth/google` callback + session.
+- [ ] Auth.js with Google provider; identity via `accounts(provider, provider_account_id)` → `User` upsert.
+- [ ] `GET /api/auth/signin/google` + `GET /api/auth/callback/google` (session + anon-link claim).
 - [ ] `GET /api/me/links` (auth-gated): original URL, code, clicks, expiry status, created date.
 - [ ] History UI page.
 

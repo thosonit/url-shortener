@@ -21,6 +21,18 @@
 - Convert `id` to `base62` when generating short URLs or resolving redirects.
 - Simpler storage, but may require extra read-time conversion.
 
+## Authentication & identity
+
+- Sign-in uses Auth.js with the Google provider.
+- Provider identity is stored in the `accounts` table, not on `users` — one row per linked
+  OAuth identity, keyed by `(provider, provider_account_id)`. This keeps a second provider an
+  additive change later.
+- Upsert on callback: find `accounts(provider='google', provider_account_id=:sub)` → its
+  `users` row; if absent, create both (user + account) and link them.
+- `users` holds app concerns only: `role`, `status`, 2FA fields, profile mirror (`email`,
+  `display_name`, `image_url`).
+- Admin sessions require a passed 2FA challenge and use a shorter session TTL than regular users.
+
 ## Anonymous session / link claim
 
 - Issue an `anon_session_id` in a signed cookie for anonymous visitors.
