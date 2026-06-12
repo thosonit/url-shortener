@@ -55,8 +55,8 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Goal:** schema + migrations + repositories matching `docs/database.md`.
 
-- [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session`, `VerificationToken` (Auth.js),
-  `TwoFactorBackupCode`, `Link`, `AuditLog`, `LinkDailyStats`.
+- [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session` (Auth.js),
+  `Link`, `AuditLog`.
 - [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`, `ActorType`.
 - [ ] Indexes: `Link.code` (unique), `Link.(user_id, created_at)`, `Link.anon_session_id`,
   `Link.expires_at`; `Account.(provider, provider_account_id)` (unique);
@@ -76,7 +76,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 - [ ] `lib/validation` zod URL schema: http/https only, reject self-referential to `SHORT_DOMAIN`.
 - [ ] `POST /api/links`: validate → insert → `code = base62(id)` → return `{ code, shortUrl, expiresAt }`.
 - [ ] `GET /[code]`: lookup → **302** active · **410** expired · **404** missing/disabled.
-  On success: atomic `click_count += 1` **and** upsert the day's `LinkDailyStats` row (same transaction).
+  On success: atomic `click_count += 1`.
 - [ ] Create-link UI: input, result with short URL, **copy** action, **QR code** (FA001.x).
 - [ ] Expired (410) friendly page; 404 page for missing/disabled.
 
@@ -112,9 +112,9 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 - [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard.
 - [ ] `/admin` layout gated server-side; redirect unauthorized.
-- [ ] Dashboard (FC001): KPI cards (total links, clicks, users) + growth chart from `LinkDailyStats`.
+- [ ] Dashboard (FC001): KPI cards (total links, links today, users).
 - [ ] `POST /admin/users/:id/role` role assignment (super_admin only).
-- [ ] 2FA scaffolding for admin sign-in (FC002.x — may defer enforcement).
+- [ ] Shorter admin session TTL applied app-side (FC002.3).
 
 **Depends on:** Phases 1, 3. **Complexity:** MEDIUM–HIGH.
 

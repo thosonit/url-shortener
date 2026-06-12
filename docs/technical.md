@@ -33,9 +33,9 @@ single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
   additive change later.
 - Upsert on callback: find `accounts(provider='google', provider_account_id=:sub)` → its
   `users` row; if absent, create both (user + account) and link them.
-- `users` holds app concerns only: `role`, `status`, 2FA fields, profile mirror (`email`,
+- `users` holds app concerns only: `role`, `status`, profile mirror (`email`,
   `display_name`, `image_url`).
-- Admin sessions require a passed 2FA challenge and use a shorter session TTL than regular users.
+- Admin sessions use a shorter session TTL than regular users.
 
 ## Anonymous session / link claim
 
@@ -73,10 +73,8 @@ A code resolves to one of four outcomes:
 ## Click tracking
 
 - Increment `click_count` atomically (DB-side `+1`, never read-modify-write) on a successful redirect.
-- In the same redirect transaction, upsert the day's `link_daily_stats` row (`clicks += 1`) so the
-  dashboard can chart clicks over time (FC001.2) — the single counter alone cannot.
-- A single counter is the MVP for per-link totals; per-click rows (geo/referrer/device) are out of
-  scope and would feed `link_daily_stats` later without changing this flow.
+- The single `click_count` counter is the MVP for per-link totals. Time-bucketed analytics
+  (daily trends, growth charts) and per-click rows (geo/referrer/device) are out of scope.
 
 ## Rate limiting
 

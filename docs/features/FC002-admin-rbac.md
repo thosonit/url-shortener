@@ -12,12 +12,12 @@ Enforce admin authorization consistently and server-side across the CMS.
 |----|-------------|--------|
 | FC002.1 | Permission presets | `users.role: user \| admin \| super_admin` (default `user`); each role is a preset of permissions, no scattered `if role == ...`. |
 | FC002.2 | Role assignment | Super-admins assign roles (`role:assign`). |
-| FC002.3 | Admin session hardening | 2FA required for `admin`+; admin sessions time out faster than regular users. |
+| FC002.3 | Admin session hardening | Admin sessions time out faster than regular users. |
 
 ## Acceptance criteria
 - `/admin` routes require the correct permission, enforced server-side (FC002.1).
 - Role assignment updates effective permissions; only super-admins can assign (FC002.2).
-- Admin accounts require 2FA and use shorter session timeouts (FC002.3).
+- Admin accounts use shorter session timeouts (FC002.3).
 - Adding a future role = define a new preset, no logic changes.
 
 ## Related

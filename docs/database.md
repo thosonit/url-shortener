@@ -1,251 +1,142 @@
-# Database Model
+// URL Shortener — database schema (DBML)
+// Derived from docs/features.md. Stack: PostgreSQL + Prisma + Auth.js.
+// Redis holds ephemeral state only (rate-limit counters, cache) — not modeled here.
+//
+// Minimal in-scope schema: FA001–FA006, FC001–FC003, FC006, FC007.
+// Render at https://dbdiagram.io or with `@dbml/cli`.
 
-PostgreSQL schema for the URL shortener, derived from [`features.md`](features.md).
-Target stack: **PostgreSQL + Prisma + Auth.js** (see [README](../README.md#tech-stack)).
-Redis holds ephemeral state only (rate-limit counters, cache) — never the source of truth.
+Project url_shortener {
+  database_type: 'PostgreSQL'
+  Note: 'Short code is base62(links.id); links.id is a monotonic bigint identity.'
+}
 
-This doc is the data contract. It is intentionally a bit wider than the MVP so that
-in-scope-later and out-of-scope features have an obvious home and require **additive
-migrations, not rewrites**. Sections marked _Extension_ are not built for MVP.
+//============================================================
+// Enums
+//============================================================
 
-## Conventions
+Enum user_role {
+  user
+  admin
+  super_admin
+}
 
-- **Timestamps:** every table has `created_at timestamptz NOT NULL DEFAULT now()`; mutable
-  tables also carry `updated_at timestamptz NOT NULL DEFAULT now()` (touched on write).
-- **Primary keys:** `links.id` is a **`bigint` identity** — this is a hard requirement, the
-  short code is `base62(id)` (FA001.2), so the id must be monotonic and integer. All other
-  tables use **`text` cuid/uuid** ids (Auth.js convention; avoids enumeration of users).
-- **Enums:** modeled as native Postgres `enum` types (Prisma `enum`). Adding a value is an
-  additive migration. Free-form, fast-moving sets (e.g. permissions) stay app-side.
-- **Soft state vs delete:** lifecycle is expressed through `status` + `expires_at`, not row
-  deletion. Audit logs and links are effectively append/replace, never hard-deleted in normal flow.
-- **JSONB** (`metadata`) is used only for open-ended audit context, never for queryable domain data.
-- **Money/PII:** only `email` and OAuth identifiers are stored; no destination-URL content is mined.
+Enum user_status {
+  active
+  suspended
+}
 
-## Entity overview
+Enum link_status {
+  active
+  disabled
+}
 
-```mermaid
-erDiagram
-    users ||--o{ links : owns
-    users ||--o{ accounts : "has (OAuth)"
-    users ||--o{ sessions : "has"
-    users ||--o{ audit_logs : "acts in (nullable)"
-    links ||--o{ link_daily_stats : "rolls up to"
+Enum actor_type {
+  user
+  system
+}
 
-    users {
-        text id PK
-        citext email UK
-        user_role role
-        user_status status
-        bool two_factor_enabled
-    }
-    links {
-        bigint id PK
-        text code UK
-        text original_url
-        text user_id FK
-        text anon_session_id
-        timestamptz expires_at
-        bigint click_count
-        link_status status
-    }
-    accounts {
-        text id PK
-        text user_id FK
-        text provider
-        text provider_account_id
-    }
-```
+//============================================================
+// Identity & auth
+//============================================================
 
-`accounts` / `sessions` / `verification_tokens` are the Auth.js adapter tables; everything else
-is application-owned.
+// Application user + role/permission anchor (FA003, FC002, FC006).
+// Provider identity lives in `accounts`, never here (multi-provider ready).
+Table users {
+  id                  text [pk, note: 'cuid (Auth.js)']
+  email               citext [unique, not null, note: 'case-insensitive']
+  email_verified      timestamptz [note: 'Auth.js field']
+  display_name        text
+  image_url           text
+  role                user_role [not null, default: 'user', note: 'FC002.1']
+  status              user_status [not null, default: 'active', note: 'FC006.2; who/why/when in audit_logs']
+  created_at          timestamptz [not null, default: `now()`]
+  updated_at          timestamptz [not null, default: `now()`]
 
----
+  Indexes {
+    role [note: 'admin filtering']
+  }
+}
 
-## Identity & auth
+// Auth.js adapter — one row per linked OAuth identity (FA003).
+// (provider, provider_account_id) replaces the old google_sub.
+Table accounts {
+  id                  text [pk]
+  user_id             text [not null, ref: > users.id, note: 'cascade delete']
+  type                text [not null]
+  provider            text [not null, note: 'e.g. google']
+  provider_account_id text [not null, note: 'OAuth subject (sub)']
+  refresh_token       text
+  access_token        text
+  expires_at          integer
+  token_type          text
+  scope               text
+  id_token            text
+  session_state       text
 
-### `users`
+  Indexes {
+    (provider, provider_account_id) [unique]
+    user_id
+  }
+}
 
-Application user + role/permission anchor. Provider identity lives in `accounts`, **not** here —
-that is the deliberate change from the previous `google_sub` column and is what lets a second
-provider be added later without a schema change (FA003).
+// Auth.js adapter. Admin sessions get a shorter `expires`, applied app-side (FC002.3 hardening).
+Table sessions {
+  id            text [pk]
+  session_token text [unique, not null]
+  user_id       text [not null, ref: > users.id, note: 'cascade delete']
+  expires       timestamptz [not null]
+}
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` PK | cuid (Auth.js) |
-| `email` | `citext` | unique, case-insensitive |
-| `email_verified` | `timestamptz?` | Auth.js field |
-| `display_name` | `text?` | from OAuth profile |
-| `image_url` | `text?` | avatar |
-| `role` | `user_role` | `user \| admin \| super_admin`, default `user` (FC002.1) |
-| `status` | `user_status` | `active \| suspended`, default `active` (FC006.2) |
-| `two_factor_enabled` | `boolean` | default `false` (FC002.3) |
-| `two_factor_secret` | `text?` | **encrypted at rest**; TOTP seed, null until enrolled |
-| `created_at` / `updated_at` | `timestamptz` | |
+//============================================================
+// Core link domain
+//============================================================
 
-Indexes: unique(`email`), index(`role`) for admin filtering.
+// Source of truth for the short code and every redirect (FA001, FA002, FA004, FA005, FC003).
+// Insert row -> UPDATE code = base62(id) in the same transaction.
+// Resolved state is derived, never stored: active iff
+//   status='active' AND (expires_at IS NULL OR expires_at > now()).
+Table links {
+  id              bigint [pk, increment, note: 'identity; base62 source (FA001.2)']
+  code            text [unique, not null, note: 'base62(id), stored on insert']
+  original_url    text [not null, note: 'validated http(s), non-self-referential (FA001.1)']
+  user_id         text [ref: > users.id, note: 'null = anonymous link']
+  anon_session_id text [note: 'signed session id, for claim-on-sign-in (FA003.2)']
+  expires_at      timestamptz [note: 'null = permanent; default rules in FA005']
+  click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA002.1)']
+  status          link_status [not null, default: 'active', note: 'FC003.2']
+  disabled_reason text
+  disabled_by     text [ref: > users.id, note: 'admin actor (FC003.2)']
+  disabled_at     timestamptz
+  created_at      timestamptz [not null, default: `now()`]
+  updated_at      timestamptz [not null, default: `now()`]
 
-> **2FA backup codes (FC002.3):** stored hashed in `two_factor_backup_codes(user_id, code_hash,
-> used_at)` rather than an array column, so single-use consumption is atomic. Added with the 2FA work.
+  Indexes {
+    (user_id, created_at) [note: 'history, FA004 (desc)']
+    anon_session_id [note: 'claim, FA003.2 (where not null)']
+    expires_at [note: 'TTL sweeps, FA005 (where not null)']
+    status [note: 'admin filter/search, FC003.1 (pair pg_trgm on code/original_url)']
+  }
+}
 
-### `accounts` _(Auth.js adapter)_
+//============================================================
+// Audit
+//============================================================
 
-One row per linked OAuth identity. `(provider, provider_account_id)` replaces the old `google_sub`.
-FA003 upsert becomes: find `accounts(provider='google', provider_account_id=sub)` → user, else create.
+// Immutable record of every mutating admin/system action (FC007). Append-only.
+Table audit_logs {
+  id          text [pk]
+  actor_id    text [ref: > users.id, note: 'null = system action']
+  actor_type  actor_type [not null, default: 'user']
+  action      text [not null, note: 'dotted verb: link.disable, role.assign, user.suspend']
+  target_type text [not null, note: 'link | user | ...']
+  target_id   text [not null, note: 'stringified; links cast from bigint']
+  metadata    jsonb [not null, default: `'{}'`, note: 'before/after, reason, request ip']
+  created_at  timestamptz [not null, default: `now()`]
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` PK | |
-| `user_id` | `text` FK→users | cascade delete |
-| `provider` | `text` | e.g. `google` |
-| `provider_account_id` | `text` | the OAuth subject (`sub`) |
-| `type`, `access_token`, `refresh_token`, `expires_at`, `id_token`, `scope`, `token_type`, `session_state` | per Auth.js | |
+  Indexes {
+    created_at [note: 'desc']
+    (target_type, target_id)
+    actor_id
+  }
+}
 
-Unique: (`provider`, `provider_account_id`).
-
-### `sessions` / `verification_tokens` _(Auth.js adapter)_
-
-Standard Auth.js tables (`session_token`, `user_id`, `expires`). Admin sessions enforce a
-**shorter `expires`** than regular users (FC002.3) — a value applied by the app at session
-creation, not a separate table.
-
----
-
-## Core link domain
-
-### `links`
-
-Source of truth for the short code and every redirect.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `bigint` PK identity | base62 source (FA001.2) — must stay monotonic |
-| `code` | `text` | `base62(id)`, unique; stored on insert (see below) |
-| `original_url` | `text` | validated `http(s)`, non-self-referential (FA001.1) |
-| `user_id` | `text? ` FK→users | null = anonymous link |
-| `anon_session_id` | `text?` | signed session id, for claim-on-sign-in (FA003.2) |
-| `expires_at` | `timestamptz?` | null = permanent; default rules in FA005 |
-| `click_count` | `bigint` | default 0, incremented on redirect (FA002.1) |
-| `status` | `link_status` | `active \| disabled`, default `active` (FC003.2) |
-| `disabled_reason` | `text?` | set when disabled |
-| `disabled_by` | `text? ` FK→users | admin actor (FC003.2) |
-| `disabled_at` | `timestamptz?` | |
-| `created_at` / `updated_at` | `timestamptz` | |
-
-**Code storage:** insert row → `UPDATE code = base62(id)` in the same transaction. `code` is
-stored (not computed on read) so the unique index can enforce it and redirects need a single
-indexed lookup. `technical.md` lists "compute on read" as an alternative; storing is preferred.
-
-**Resolved state** is derived, never a column: `expired = expires_at < now()`. A redirect is
-`active` only when `status='active' AND (expires_at IS NULL OR expires_at > now())` (FA002 / FC003).
-
-Indexes:
-- unique(`code`) — redirect hot path.
-- index(`user_id`, `created_at desc`) — history (FA004).
-- index(`anon_session_id`) where not null — claim (FA003.2).
-- index(`expires_at`) where not null — TTL sweeps (FA005).
-- index(`status`) / search support for admin (FC003.1; pair with `pg_trgm` on `original_url`/`code` for fuzzy search).
-
-> **Enumeration note:** sequential `base62(id)` codes are guessable. If that becomes a concern,
-> obfuscate the id→code mapping (offset + Feistel/Hashids) **without** a schema change — `code`
-> stays the stored canonical value.
-
----
-
-## Audit & analytics
-
-### `audit_logs`
-
-Immutable record of every mutating admin/system action (FC007). Append-only — no update, no delete.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` PK | |
-| `actor_id` | `text? ` FK→users | null = system action |
-| `actor_type` | `actor_type` | `user \| system`, default `user` |
-| `action` | `text` | dotted verb, e.g. `link.disable`, `role.assign`, `user.suspend` |
-| `target_type` | `text` | `link \| user \| ...` |
-| `target_id` | `text` | id of the target (stringified; links cast from bigint) |
-| `metadata` | `jsonb` | default `'{}'` — before/after, reason, request ip |
-| `created_at` | `timestamptz` | |
-
-Indexes: index(`created_at desc`); index(`target_type`, `target_id`); index(`actor_id`).
-Immutability is enforced by app-level write-only access (and optionally a `BEFORE UPDATE/DELETE`
-trigger that raises).
-
-### `link_daily_stats`
-
-Daily rollup powering dashboard growth charts (FC001.2). A single `click_count` counter cannot
-produce a click-**over-time** series, so clicks and creations are also accumulated per day here.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `day` | `date` | part of PK |
-| `link_id` | `bigint? ` FK→links | null row = system-wide daily total |
-| `links_created` | `int` | default 0 |
-| `clicks` | `int` | default 0 |
-
-PK: (`day`, `link_id`). The redirect path does `INSERT ... ON CONFLICT DO UPDATE` to bump the
-day's row alongside the `links.click_count` increment (or a batched flush from Redis). For MVP
-the system-wide row (`link_id IS NULL`) is enough to drive both charts; per-link rows are the
-extension point for per-link trends without a new table.
-
-> **Extension — per-click events:** detailed analytics (geo / referrer / device) is **out of
-> scope** ([`features.md`](features.md)). When needed, add an append-only `link_clicks(id,
-> link_id, ts, ip, referrer, ua, country)` table feeding `link_daily_stats`; nothing above changes.
-
----
-
-## Enum types
-
-| Enum | Values | Feature |
-|------|--------|---------|
-| `user_role` | `user`, `admin`, `super_admin` | FC002.1 |
-| `user_status` | `active`, `suspended` | FC006.2 |
-| `link_status` | `active`, `disabled` | FC003.2 |
-| `actor_type` | `user`, `system` | FC007.1 |
-
-## RBAC: roles as permission presets (FC002)
-
-`users.role` is the stored source of truth. Permissions are **derived in code** from a static
-preset map (`ROLE_PERMISSIONS: Record<UserRole, Permission[]>`), so checks read
-`can(user, 'link:disable')` — never `if role === 'admin'` (FC002.1). Adding a role = add an
-enum value + a preset entry; no logic changes elsewhere.
-
-> **Extension — DB-backed permissions:** if roles must become editable at runtime, introduce
-> `permissions(key)` + `role_permissions(role, permission_key)` and load the map from the DB
-> instead of code. The `can()` call sites stay identical. Not built for MVP.
-
-## Rate limiting (FA006) — not a table
-
-Per-IP creation throttling lives entirely in **Redis** (sliding window / token bucket), not
-Postgres. Over-limit requests are rejected with `429` before insert; nothing is persisted. No
-schema object is required.
-
----
-
-## Feature → schema traceability
-
-| Feature | Tables / columns |
-|---------|------------------|
-| FA001 create link | `links` (insert + `code=base62(id)`); validation app-side |
-| FA002 redirect | `links` (`code` lookup, `status`, `expires_at`, `click_count++`), `link_daily_stats` |
-| FA003 Google sign-in + claim | `users`, `accounts`, `sessions`; `links.user_id`/`anon_session_id` |
-| FA004 link history | `links` by `user_id` |
-| FA005 expiration / TTL | `links.expires_at` (+ claim clears it) |
-| FA006 rate limiting | Redis only (no table) |
-| FC001 dashboard | `link_daily_stats`, counts over `links` |
-| FC002 RBAC + 2FA | `users.role` + code preset map; `users.two_factor_*`, `two_factor_backup_codes` |
-| FC003 link management | `links.status` / `disabled_*`, force-expire via `expires_at` |
-| FC006 user management | `users.status`, `links` by owner |
-| FC007 audit log | `audit_logs` |
-
-## Migration notes from the previous model
-
-- **Removed** `users.google_sub` → provider identity now in `accounts` (multi-provider ready).
-- **Added** 2FA fields and `two_factor_backup_codes` (FC002.3 had no storage before).
-- **Added** `link_daily_stats` (FC001.2 charts were not satisfiable by a single counter).
-- **Removed** the `reports` and `blocklist_domains` tables and their enums — reports & moderation
-  (FC004) and the domain blocklist (FC005) are out of scope ([`features.md`](features.md)).
-- **Links** gained `disabled_at` and `updated_at`; `code` is committed to being stored, not
-  computed on read.

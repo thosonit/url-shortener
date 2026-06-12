@@ -10,12 +10,10 @@ Give admins a centralized operational overview at a glance.
 ## Sub-features
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
-| FC001.1 | KPIs | Total links, links/clicks today. |
-| FC001.2 | Growth charts | Link and click growth over time. |
+| FC001.1 | KPIs | Total links, links today. |
 
 ## Acceptance criteria
 - Admins see system-health metrics at a glance (FC001.1).
-- Trends are visualized over time (FC001.2).
 - Dashboard links to link management, users, and audit.
 
 ## Related

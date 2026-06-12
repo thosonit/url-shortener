@@ -26,8 +26,8 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 - _Anonymous_ — a signed `anon_session_id` cookie is issued on first visit; it ties anonymous
   links to the browser for later claim (FA003.2).
 - _User session_ — Auth.js session cookie. Required by `/api/me/*`.
-- _Admin_ — `role ∈ {admin, super_admin}` plus a passed 2FA challenge and a shorter session TTL
-  (FC002.3). Required by all `/admin/*`. Checks are by **permission**, not role string (FC002.1).
+- _Admin_ — `role ∈ {admin, super_admin}` plus a shorter session TTL (FC002.3). Required by all
+  `/admin/*`. Checks are by **permission**, not role string (FC002.1).
 
 **Rate limiting.** `POST /api/links` is throttled per IP (FA006). Responses carry
 `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; over-limit → `429` with `Retry-After`.
@@ -56,17 +56,12 @@ Every mutating `/admin/*` call writes an `audit_logs` entry (FC007).
 | `GET` | `/api/auth/callback/google` | none | FA003 | OAuth callback + anon-link claim |
 | `GET` | `/api/auth/session` | any | FA003 | Current session |
 | `POST` | `/api/auth/signout` | user | FA003 | End session |
-| `POST` | `/api/auth/2fa/verify` | user (challenge) | FC002.3 | Submit TOTP during sign-in |
-| `POST` | `/api/me/2fa/setup` | user | FC002.3 | Begin TOTP enrollment |
-| `POST` | `/api/me/2fa/enable` | user | FC002.3 | Confirm & enable 2FA |
-| `POST` | `/api/me/2fa/disable` | user | FC002.3 | Disable 2FA |
 
 ### CMS / Admin
 
 | Method | Path | Permission | Feature | Purpose |
 |--------|------|-----------|---------|---------|
 | `GET` | `/admin/stats` | `dashboard:read` | FC001.1 | KPI snapshot |
-| `GET` | `/admin/stats/timeseries` | `dashboard:read` | FC001.2 | Growth series |
 | `GET` | `/admin/links` | `link:read` | FC003.1 | Search / filter links |
 | `GET` | `/admin/links/:id` | `link:read` | FC003.4 | Link detail + clicks |
 | `POST` | `/admin/links/:id/disable` | `link:disable` | FC003.2 | Disable a link |
@@ -122,8 +117,7 @@ Resolve a short code and redirect. **Not enveloped** — returns HTTP semantics 
 
 `302` (not `301`) is deliberate: a cached permanent redirect would bypass the server and break
 per-click counting. Disabled links return `404` (not `410`) so a takedown does not confirm the
-code ever existed. On a successful redirect only: increment `links.click_count` and bump
-`link_daily_stats` (FA002.1).
+code ever existed. On a successful redirect only: increment `links.click_count` (FA002.1).
 
 ### `GET /api/me/links`
 Authenticated user's link history (FA004). Paginated.
@@ -156,34 +150,18 @@ Claimed links become permanent and appear in `GET /api/me/links`.
 ### `GET /api/auth/session` · `POST /api/auth/signout`
 Standard Auth.js session read and sign-out.
 
-### 2FA (FC002.3)
-Required for `admin`+ accounts; available to any user.
-
-- `POST /api/me/2fa/setup` → `{ "secret": "BASE32", "otpauthUrl": "otpauth://totp/..." }`.
-  Stores `two_factor_secret` (encrypted) as **pending**, not yet enabled.
-- `POST /api/me/2fa/enable` `{ "token": "123456" }` → verifies, sets `two_factor_enabled=true`,
-  returns one-time `backupCodes[]` (stored hashed). Bad token → `400 VALIDATION_ERROR`.
-- `POST /api/me/2fa/disable` `{ "token": "123456" }` → clears 2FA.
-- `POST /api/auth/2fa/verify` `{ "token": "123456" }` → completes a sign-in challenge for an
-  account with 2FA enabled. Accepts a TOTP or a backup code (consumed once).
-
 ---
 
 ## CMS / Admin — detail
 
-All `/admin/*` require admin+ permission (FC002), a passed 2FA challenge, and write an
-`audit_logs` entry on every mutation (FC007). Forbidden permission → `403 FORBIDDEN`.
+All `/admin/*` require admin+ permission (FC002) and write an `audit_logs` entry on every
+mutation (FC007). Forbidden permission → `403 FORBIDDEN`.
 
 ### Dashboard (FC001)
-- `GET /admin/stats` → KPI snapshot: total links, links & clicks today.
+- `GET /admin/stats` → KPI snapshot: total links, links today.
   ```json
   { "success": true, "data": {
-      "totalLinks": 10423, "linksToday": 87, "clicksToday": 1290 }, "error": null }
-  ```
-- `GET /admin/stats/timeseries?metric=links|clicks&range=30d` → daily series from
-  `link_daily_stats` (FC001.2):
-  ```json
-  { "success": true, "data": [ { "day": "2026-06-10", "value": 120 } ], "error": null }
+      "totalLinks": 10423, "linksToday": 87 }, "error": null }
   ```
 
 ### Link management (FC003)
@@ -197,7 +175,7 @@ All `/admin/*` require admin+ permission (FC002), a passed 2FA challenge, and wr
 
 ### User management (FC006)
 - `GET /admin/users?query=&page=` → browse/search users (FC006.1).
-- `GET /admin/users/:id` → user detail (role, status, link count, 2FA state).
+- `GET /admin/users/:id` → user detail (role, status, link count).
 - `GET /admin/users/:id/links?page=` → links owned by the user (FC006.3).
 - `POST /admin/users/:id/suspend` `{ "reason": "Repeated abuse" }` → `status='suspended'`;
   blocks the account's privileged actions (FC006.2).

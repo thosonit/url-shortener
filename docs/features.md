@@ -15,8 +15,8 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 
 ## CMS features
 
-- [FC001 — Admin dashboard](./features/FC001-cms-dashboard.md) — KPIs · growth charts
-- [FC002 — RBAC / permissions](./features/FC002-admin-rbac.md) — presets · role assignment · 2FA
+- [FC001 — Admin dashboard](./features/FC001-cms-dashboard.md) — KPIs
+- [FC002 — RBAC / permissions](./features/FC002-admin-rbac.md) — presets · role assignment · admin session hardening
 - [FC003 — Link management](./features/FC003-link-management.md) — search · disable/enable · force-expire · clicks
 - [FC006 — User management](./features/FC006-user-management.md) — list · suspend · view links
 - [FC007 — Audit log](./features/FC007-audit-log.md) — record mutations · read-only view
