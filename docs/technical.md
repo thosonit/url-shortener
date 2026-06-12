@@ -7,7 +7,7 @@
 3. Reject self-referential links that point back to the service domain.
 4. Insert a new `links` record.
 5. Generate `code` from `base62(id)`.
-6. Store the `code` or compute it at read time.
+6. Store the `code` (the decided approach — see [Code generation options](#code-generation-options)).
 
 ## Code generation options
 
@@ -20,6 +20,10 @@
 - Store only `id`.
 - Convert `id` to `base62` when generating short URLs or resolving redirects.
 - Simpler storage, but may require extra read-time conversion.
+
+**Decision: store the `code`.** A stored, uniquely-indexed `code` gives the redirect hot path a
+single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
+`UPDATE code = base62(id)` in the same transaction (see [`database.md`](database.md)).
 
 ## Authentication & identity
 
@@ -49,6 +53,17 @@ SET user_id = :userId, expires_at = NULL
 WHERE anon_session_id = :anonId AND user_id IS NULL;
 ```
 
+## Redirect resolution
+
+A code resolves to one of four outcomes:
+
+- **Active** → `302` redirect to `original_url`. `302` (not `301`) is required so the redirect is
+  not cached and every click reaches the server for counting.
+- **Expired** (`expires_at < now`) → `410 Gone` with a friendly "Link expired" message.
+- **Disabled or blocklisted** → `404 Not Found`. A takedown should not confirm the code existed,
+  so these are indistinguishable from a never-created code.
+- **Unknown** → `404 Not Found`.
+
 ## Expiry handling
 
 - Anonymous links expire after 30 days.
@@ -57,9 +72,11 @@ WHERE anon_session_id = :anonId AND user_id IS NULL;
 
 ## Click tracking
 
-- Increment `click_count` on successful redirect.
-- Track clicks in a single counter for MVP.
-- Future enhancements may add per-click details for analytics.
+- Increment `click_count` atomically (DB-side `+1`, never read-modify-write) on a successful redirect.
+- In the same redirect transaction, upsert the day's `link_daily_stats` row (`clicks += 1`) so the
+  dashboard can chart clicks over time (FC001.2) — the single counter alone cannot.
+- A single counter is the MVP for per-link totals; per-click rows (geo/referrer/device) are out of
+  scope and would feed `link_daily_stats` later without changing this flow.
 
 ## Rate limiting
 

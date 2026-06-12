@@ -2,7 +2,7 @@
 
 A service for turning long URLs into short, shareable links and redirecting visitors back to the original destination.
 
-> **Status:** early scaffold. The tech stack has not been chosen yet — see [Decisions](#decisions).
+> **Status:** docs-only scaffold — no application code yet. The stack is chosen — see [Tech stack](#tech-stack).
 
 ## Overview
 
@@ -51,9 +51,9 @@ See [`docs/features.md`](docs/features.md) for the full two-tier feature map (`F
 
 Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder, API keys, editing the destination URL, and detailed analytics (geo / referrer / device).
 
-## Tech stack plan
+## Tech stack
 
-### Recommended (start here)
+The chosen stack. `database.md`, `api.md`, and the [implementation plan](docs/plans/implementation-plan.md) build on it.
 
 | Layer | Choice |
 |-------|--------|
@@ -65,7 +65,9 @@ Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder
 | Auth | Auth.js (NextAuth) |
 | App (later) | React Native / Expo |
 
-### Alternative stacks
+### Alternatives considered
+
+Recorded for context; not the chosen path.
 
 - **Dedicated API service** — Web: Next.js · API: NestJS or Fastify · ORM: Prisma · Storage: Redis + PostgreSQL
 - **Server-driven** — Web: Remix · API: Node + Express · CMS: Keystone · Storage: PostgreSQL

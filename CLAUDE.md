@@ -9,11 +9,10 @@ A URL shortener. Two core operations everything else builds on:
 
 ## State
 
-Docs-only scaffold — no application code yet, no dependency manifest. The **recommended**
-stack (start here) is Next.js full-stack · Prisma · PostgreSQL · Redis · Auth.js
-(see [README](README.md#tech-stack-plan)); it is recommended, not yet scaffolded. All candidate
-stacks share **PostgreSQL**. Do not assume a build/test/lint command exists; there are none yet.
-Confirm the stack before scaffolding code, then add the real commands here.
+Docs-only scaffold — no application code yet, no dependency manifest. The **chosen**
+stack is Next.js full-stack · Prisma · PostgreSQL · Redis · Auth.js
+(see [README](README.md#tech-stack)); it is decided but not yet scaffolded. Do not assume a
+build/test/lint command exists; there are none yet. Add the real commands here once scaffolded.
 
 ## Docs
 

@@ -1,7 +1,7 @@
 # Database Model
 
 PostgreSQL schema for the URL shortener, derived from [`features.md`](features.md).
-Target stack: **PostgreSQL + Prisma + Auth.js** (see [README](../README.md#tech-stack-plan)).
+Target stack: **PostgreSQL + Prisma + Auth.js** (see [README](../README.md#tech-stack)).
 Redis holds ephemeral state only (rate-limit counters, cache) — never the source of truth.
 
 This doc is the data contract. It is intentionally a bit wider than the MVP so that

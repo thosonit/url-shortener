@@ -1,7 +1,7 @@
 # Implementation Plan — URL Shortener
 
 > From docs-only scaffold → working application.
-> Stack (per [README](../../README.md#tech-stack-plan)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Redis · Auth.js**.
+> Stack (per [README](../../README.md#tech-stack)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Redis · Auth.js**.
 > Feature IDs reference [`docs/features.md`](../features.md). Endpoints reference [`docs/api.md`](../api.md). Schema references [`docs/database.md`](../database.md).
 
 ## Requirements restatement
@@ -12,7 +12,7 @@ Build a URL shortener with three surfaces:
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api.md`)
 3. **CMS** — RBAC-governed admin dashboard for links, reports, blocklist, users, audit. (`FC001`–`FC007`)
 
-The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 301 / 410 / 404).
+The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled-blocklisted).
 
 ## Architecture overview
 
@@ -34,7 +34,7 @@ apps/web (Next.js App Router)
 └── prisma/                   # schema.prisma + migrations + seed
 ```
 
-Repository pattern for data access; consistent API response envelope (`{ data, error, meta }`); server-side permission checks on every `/admin` route; audit log on every admin mutation.
+Repository pattern for data access; consistent API response envelope (`{ success, data, error, meta }`, per [`api.md`](../api.md)); server-side permission checks on every `/admin` route; audit log on every admin mutation.
 
 ---
 
@@ -49,14 +49,20 @@ Repository pattern for data access; consistent API response envelope (`{ data, e
 - [ ] Vitest + Playwright config; CI workflow (lint, typecheck, test, build).
 - [ ] **Update CLAUDE.md** "State" section with the real build/test/lint commands once chosen.
 
-**Depends on:** stack confirmation. **Complexity:** LOW.
+**Depends on:** none (stack chosen — see [README](../../README.md#tech-stack)). **Complexity:** LOW.
 
 ## Phase 1 — Data layer
 
 **Goal:** schema + migrations + repositories matching `docs/database.md`.
 
-- [ ] `prisma/schema.prisma`: `User`, `Link`, `Blocklist`, `Report`, `AuditLog` (enums for `role`, `status`).
-- [ ] Indexes: `Link.code` (unique), `Link.user_id`, `Link.anon_session_id`.
+- [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session`, `VerificationToken` (Auth.js),
+  `TwoFactorBackupCode`, `Link`, `BlocklistDomain`, `Report`, `AuditLog`, `LinkDailyStats`.
+- [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`, `ReportSource`, `ReportStatus`,
+  `ReportResolution`, `ActorType`.
+- [ ] Indexes: `Link.code` (unique), `Link.(user_id, created_at)`, `Link.anon_session_id`,
+  `Link.expires_at`, `Link.domain`; `Account.(provider, provider_account_id)` (unique);
+  `Report.(status, created_at)`; `AuditLog.created_at`.
+- [ ] `Link.id` is `bigint` autoincrement (base62 source); other ids are cuid.
 - [ ] Initial migration + Prisma client singleton.
 - [ ] Repositories (findById, findByCode, create, update, list).
 - [ ] Seed script (super_admin user, sample links).
@@ -70,9 +76,10 @@ Repository pattern for data access; consistent API response envelope (`{ data, e
 - [ ] `lib/shortcode` base62 encode/decode (+ unit tests).
 - [ ] `lib/validation` zod URL schema: http/https only, reject self-referential to `SHORT_DOMAIN`.
 - [ ] `POST /api/links`: validate → insert → `code = base62(id)` → return `{ code, shortUrl, expiresAt }`.
-- [ ] `GET /[code]`: lookup → **301** active · **410** expired · **404** missing · increment `click_count`.
+- [ ] `GET /[code]`: lookup → **302** active · **410** expired · **404** missing/disabled/blocklisted.
+  On success: atomic `click_count += 1` **and** upsert the day's `LinkDailyStats` row (same transaction).
 - [ ] Create-link UI: input, result with short URL, **copy** action, **QR code** (FA001.x).
-- [ ] Expired (410) friendly page.
+- [ ] Expired (410) friendly page; 404 page for missing/disabled.
 
 **Depends on:** Phase 1. **Complexity:** MEDIUM. **This phase alone is a usable product.**
 
@@ -106,7 +113,8 @@ Repository pattern for data access; consistent API response envelope (`{ data, e
 
 - [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard.
 - [ ] `/admin` layout gated server-side; redirect unauthorized.
-- [ ] Dashboard (FC001): KPI cards (total links, clicks, users, open reports) + growth chart.
+- [ ] Dashboard (FC001): KPI cards (total links, clicks, users) + growth chart from `LinkDailyStats`.
+  The "open reports" and "rate-limited IPs" KPIs light up once `Report` lands in Phase 7.
 - [ ] `POST /admin/users/:id/role` role assignment (super_admin only).
 - [ ] 2FA scaffolding for admin sign-in (FC002.x — may defer enforcement).
 
@@ -165,10 +173,16 @@ P0 → P1 → P2 ──┬─→ P3 → P4
 | RBAC bypass on `/admin` | HIGH | Server-side guard on every route + handler, never client-only |
 | Missing audit entries | MEDIUM | Centralized mutation helper that always logs |
 
-## Open decisions (confirm before/while building)
+## Decisions
 
-- Code strategy: **stored** vs **computed-on-read** `code` (technical.md lists both). Recommend **stored** for index lookups.
-- Redirect status: api.md says `301`; confirm `301` (cached) vs `302` (allows future analytics).
+Resolved:
+
+- **Code strategy:** store the `code` (`UPDATE code = base62(id)` post-insert) for indexed lookups.
+- **Redirect status:** `302` for active (uncached → click counting works); `410` expired;
+  `404` for missing/disabled/blocklisted (a takedown shouldn't confirm the code existed).
+
+Still open:
+
 - Monorepo now (for later RN/Expo app) vs single Next.js app. Recommend single app now, extract later (YAGNI).
 - Deploy target.
 

@@ -122,12 +122,15 @@ Resolve a short code and redirect. **Not enveloped** — returns HTTP semantics 
 
 | Outcome | Status |
 |---------|--------|
-| Active link | `301` redirect to `original_url` |
+| Active link | `302` redirect to `original_url` |
 | Expired (`expires_at < now`) | `410 Gone` — "Link expired" page (FA005.3) |
-| Disabled (`status='disabled'`) or domain blocklisted | `410 Gone` — "Link unavailable" page (FC003.2 / FC005.2) |
+| Disabled (`status='disabled'`) or domain blocklisted | `404 Not Found` (FC003.2 / FC005.2) |
 | Unknown code | `404 Not Found` (FA002.3) |
 
-On a successful redirect only: increment `links.click_count` and bump `link_daily_stats` (FA002.1).
+`302` (not `301`) is deliberate: a cached permanent redirect would bypass the server and break
+per-click counting. Disabled/blocklisted links return `404` (not `410`) so a takedown does not
+confirm the code ever existed. On a successful redirect only: increment `links.click_count` and
+bump `link_daily_stats` (FA002.1).
 
 ### `POST /api/reports`
 File a report against a link from the redirect/preview page (FC004.1). Anonymous or user.
