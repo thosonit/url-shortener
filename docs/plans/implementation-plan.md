@@ -2,14 +2,14 @@
 
 > From docs-only scaffold → working application.
 > Stack (per [README](../../README.md#tech-stack)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Redis · Auth.js**.
-> Feature IDs reference [`docs/features.md`](../features.md). Endpoints reference [`docs/api.md`](../api.md). Schema references [`docs/database.md`](../database.md).
+> Feature IDs reference [`docs/features.md`](../features.md). Endpoints reference [`docs/api/`](../api/api.md) (index + [`openapi.yaml`](../api/openapi.yaml)). Schema references [`docs/database.md`](../database.md).
 
 ## Requirements restatement
 
 Build a URL shortener with three surfaces:
 
 1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA006`)
-2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api.md`)
+2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api/`)
 3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC001`–`FC003`, `FC006`)
 
 The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled).
@@ -34,7 +34,7 @@ apps/web (Next.js App Router)
 └── prisma/                   # schema.prisma + migrations + seed
 ```
 
-Repository pattern for data access; consistent API response envelope (`{ success, data, error, meta }`, per [`api.md`](../api.md)); server-side permission checks on every `/admin` route.
+Repository pattern for data access; consistent API response envelope (`{ success, data, error, meta }`, per [`api.md`](../api/api.md)); server-side permission checks on every `/admin` route.
 
 ---
 
