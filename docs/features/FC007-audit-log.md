@@ -19,4 +19,4 @@ Record every admin and system change for accountability.
 - Logs are reviewable in the CMS.
 
 ## Related
-- Captures actions from [[FC002]], [[FC003]], [[FC004]], [[FC005]], [[FC006]].
+- Captures actions from [[FC002]], [[FC003]], [[FC006]].

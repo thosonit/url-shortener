@@ -20,5 +20,5 @@ Curb anonymous link-creation spam with a minimal per-IP throttle.
 ## Related API
 - Applies to `POST /api/links` (see [[FA001]]).
 
-## Related
-- Repeated abuse may surface as an auto-report / rate-limit indicator in the CMS ([[FC001]], [[FC004]]).
+## Notes
+- Throttling lives entirely in Redis; over-limit requests are rejected with `429` and nothing is persisted.

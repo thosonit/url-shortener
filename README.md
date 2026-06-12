@@ -11,18 +11,18 @@ The core idea is small:
 1. **Shorten** — accept a long URL, generate a unique short code, store the mapping.
 2. **Redirect** — look up a short code and issue an HTTP redirect to the original URL.
 
-Everything else (QR codes, expiry, auth, rate limiting, moderation) builds on top of those two operations.
+Everything else (QR codes, expiry, auth, rate limiting) builds on top of those two operations.
 
 The system will support:
 
 - A public web/app user interface for creating short links and following redirects.
 - A REST API for programmatic link creation and redirect lookups.
-- A CMS dashboard for managing links, users, reports, and abuse.
+- A CMS dashboard for managing links and users.
 
 User-facing functionality:
 
 - Web/App: Create short links (with QR codes and a copy action), follow redirects, view personal link history, set link expiration, and optionally sign in with Google to save and claim links.
-- CMS: Admins manage all links (search, disable/enable, force-expire), handle reports and moderation, maintain a domain blocklist, manage users, and review an audit log — all governed by role-based access control.
+- CMS: Admins manage all links (search, disable/enable, force-expire), manage users, and review an audit log — all governed by role-based access control.
 
 ## Planned Features
 
@@ -42,14 +42,12 @@ See [`docs/features.md`](docs/features.md) for the full two-tier feature map (`F
 - [ ] **FC001** — Admin dashboard (KPIs · growth charts)
 - [ ] **FC002** — RBAC / permissions (presets · role assignment · 2FA)
 - [ ] **FC003** — Link management (search · disable/enable · force-expire · clicks)
-- [ ] **FC004** — Reports & moderation (report flow · resolve)
-- [ ] **FC005** — Blocklist (domain CRUD · enforcement)
 - [ ] **FC006** — User management (list · suspend · view links)
 - [ ] **FC007** — Audit log (record mutations · read-only view)
 
 ### Out of scope
 
-Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder, API keys, editing the destination URL, and detailed analytics (geo / referrer / device).
+Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder, API keys, editing the destination URL, reports & moderation, domain blocklist, and detailed analytics (geo / referrer / device).
 
 ## Tech stack
 

@@ -29,11 +29,8 @@ erDiagram
     users ||--o{ links : owns
     users ||--o{ accounts : "has (OAuth)"
     users ||--o{ sessions : "has"
-    users ||--o{ reports : "files (nullable)"
     users ||--o{ audit_logs : "acts in (nullable)"
-    links ||--o{ reports : "is target of"
     links ||--o{ link_daily_stats : "rolls up to"
-    blocklist_domains }o--o{ links : "blocks (by domain match)"
 
     users {
         text id PK
@@ -125,7 +122,6 @@ Source of truth for the short code and every redirect.
 | `id` | `bigint` PK identity | base62 source (FA001.2) — must stay monotonic |
 | `code` | `text` | `base62(id)`, unique; stored on insert (see below) |
 | `original_url` | `text` | validated `http(s)`, non-self-referential (FA001.1) |
-| `domain` | `citext` | host extracted from `original_url`, for blocklist joins (FC005) |
 | `user_id` | `text? ` FK→users | null = anonymous link |
 | `anon_session_id` | `text?` | signed session id, for claim-on-sign-in (FA003.2) |
 | `expires_at` | `timestamptz?` | null = permanent; default rules in FA005 |
@@ -141,64 +137,18 @@ stored (not computed on read) so the unique index can enforce it and redirects n
 indexed lookup. `technical.md` lists "compute on read" as an alternative; storing is preferred.
 
 **Resolved state** is derived, never a column: `expired = expires_at < now()`. A redirect is
-`active` only when `status='active' AND (expires_at IS NULL OR expires_at > now())` AND the
-`domain` is not blocklisted (FA002 / FC003 / FC005).
+`active` only when `status='active' AND (expires_at IS NULL OR expires_at > now())` (FA002 / FC003).
 
 Indexes:
 - unique(`code`) — redirect hot path.
 - index(`user_id`, `created_at desc`) — history (FA004).
 - index(`anon_session_id`) where not null — claim (FA003.2).
 - index(`expires_at`) where not null — TTL sweeps (FA005).
-- index(`domain`) — retroactive blocklist enforcement (FC005.2).
 - index(`status`) / search support for admin (FC003.1; pair with `pg_trgm` on `original_url`/`code` for fuzzy search).
 
 > **Enumeration note:** sequential `base62(id)` codes are guessable. If that becomes a concern,
 > obfuscate the id→code mapping (offset + Feistel/Hashids) **without** a schema change — `code`
 > stays the stored canonical value.
-
----
-
-## Moderation & safety
-
-### `blocklist_domains`
-
-Banned destination domains, enforced at create and redirect (FC005).
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` PK | |
-| `domain` | `citext` | unique, normalized (lowercased, no `www.`) |
-| `match_subdomains` | `boolean` | default `true` — block `*.domain` too (extensible without schema change) |
-| `reason` | `text` | |
-| `added_by` | `text` FK→users | |
-| `created_at` | `timestamptz` | |
-
-Enforcement joins on `links.domain`; subdomain matching is a suffix check in the query.
-
-### `reports`
-
-Report-driven moderation queue (FC004). Covers both the public report button and auto-rules.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` PK | |
-| `link_id` | `bigint? ` FK→links | nullable: IP-threshold auto-reports may have no single link |
-| `source` | `report_source` | `user \| auto_blocklist \| auto_rate_limit` (FC004.1) |
-| `reason` | `text` | reporter-supplied or rule name |
-| `reporter_user_id` | `text? ` FK→users | null for anonymous reporters |
-| `reporter_ip` | `inet?` | for anonymous / auto reports |
-| `status` | `report_status` | `open \| resolved \| dismissed`, default `open` |
-| `resolution` | `report_resolution?` | `link_disabled \| dismissed`, set on close (FC004.2) |
-| `resolution_note` | `text?` | |
-| `resolved_by` | `text? ` FK→users | |
-| `resolved_at` | `timestamptz?` | |
-| `created_at` | `timestamptz` | |
-
-Indexes: index(`status`, `created_at`) — admin queue; index(`link_id`).
-
-> Auto-rules write here: a create against a blocklisted domain (FC005) or an IP over the
-> rate-limit threshold (FA006) inserts a `reports` row with the matching `source`. No separate
-> table is needed for "rate-limited IPs" on the dashboard — derive open `auto_rate_limit` reports.
 
 ---
 
@@ -213,8 +163,8 @@ Immutable record of every mutating admin/system action (FC007). Append-only — 
 | `id` | `text` PK | |
 | `actor_id` | `text? ` FK→users | null = system action |
 | `actor_type` | `actor_type` | `user \| system`, default `user` |
-| `action` | `text` | dotted verb, e.g. `link.disable`, `role.assign`, `blocklist.add` |
-| `target_type` | `text` | `link \| user \| report \| blocklist_domain \| ...` |
+| `action` | `text` | dotted verb, e.g. `link.disable`, `role.assign`, `user.suspend` |
+| `target_type` | `text` | `link \| user \| ...` |
 | `target_id` | `text` | id of the target (stringified; links cast from bigint) |
 | `metadata` | `jsonb` | default `'{}'` — before/after, reason, request ip |
 | `created_at` | `timestamptz` | |
@@ -253,9 +203,6 @@ extension point for per-link trends without a new table.
 | `user_role` | `user`, `admin`, `super_admin` | FC002.1 |
 | `user_status` | `active`, `suspended` | FC006.2 |
 | `link_status` | `active`, `disabled` | FC003.2 |
-| `report_source` | `user`, `auto_blocklist`, `auto_rate_limit` | FC004.1 |
-| `report_status` | `open`, `resolved`, `dismissed` | FC004.2 |
-| `report_resolution` | `link_disabled`, `dismissed` | FC004.2 |
 | `actor_type` | `user`, `system` | FC007.1 |
 
 ## RBAC: roles as permission presets (FC002)
@@ -271,9 +218,9 @@ enum value + a preset entry; no logic changes elsewhere.
 
 ## Rate limiting (FA006) — not a table
 
-Per-IP creation throttling lives in **Redis** (sliding window / token bucket), not Postgres.
-Threshold breaches surface in two read models already defined: an `auto_rate_limit` row in
-`reports` (FC004) and the derived dashboard KPI (FC001.1). No schema object is required.
+Per-IP creation throttling lives entirely in **Redis** (sliding window / token bucket), not
+Postgres. Over-limit requests are rejected with `429` before insert; nothing is persisted. No
+schema object is required.
 
 ---
 
@@ -286,12 +233,10 @@ Threshold breaches surface in two read models already defined: an `auto_rate_lim
 | FA003 Google sign-in + claim | `users`, `accounts`, `sessions`; `links.user_id`/`anon_session_id` |
 | FA004 link history | `links` by `user_id` |
 | FA005 expiration / TTL | `links.expires_at` (+ claim clears it) |
-| FA006 rate limiting | Redis; spillover → `reports(source=auto_rate_limit)` |
-| FC001 dashboard | `link_daily_stats`, counts over `links` / `reports` |
+| FA006 rate limiting | Redis only (no table) |
+| FC001 dashboard | `link_daily_stats`, counts over `links` |
 | FC002 RBAC + 2FA | `users.role` + code preset map; `users.two_factor_*`, `two_factor_backup_codes` |
 | FC003 link management | `links.status` / `disabled_*`, force-expire via `expires_at` |
-| FC004 reports & moderation | `reports`, `blocklist_domains` (auto), `links` (disable) |
-| FC005 blocklist | `blocklist_domains`, joined on `links.domain` |
 | FC006 user management | `users.status`, `links` by owner |
 | FC007 audit log | `audit_logs` |
 
@@ -300,7 +245,7 @@ Threshold breaches surface in two read models already defined: an `auto_rate_lim
 - **Removed** `users.google_sub` → provider identity now in `accounts` (multi-provider ready).
 - **Added** 2FA fields and `two_factor_backup_codes` (FC002.3 had no storage before).
 - **Added** `link_daily_stats` (FC001.2 charts were not satisfiable by a single counter).
-- **Reports** gained `source`, `reporter_user_id`/`reporter_ip`, `resolution`, `dismissed`
-  status — the prior `open|resolved` + free-text `reporter` could not model auto-rules or anon reporters.
-- **Links** gained `domain` (FC005 join), `disabled_at`, and `updated_at`; `code` is committed
-  to being stored, not computed on read.
+- **Removed** the `reports` and `blocklist_domains` tables and their enums — reports & moderation
+  (FC004) and the domain blocklist (FC005) are out of scope ([`features.md`](features.md)).
+- **Links** gained `disabled_at` and `updated_at`; `code` is committed to being stored, not
+  computed on read.

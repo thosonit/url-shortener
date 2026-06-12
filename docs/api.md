@@ -45,8 +45,7 @@ Every mutating `/admin/*` call writes an `audit_logs` entry (FC007).
 | Method | Path | Auth | Feature | Purpose |
 |--------|------|------|---------|---------|
 | `POST` | `/api/links` | anon / user | FA001, FA006 | Create a short link |
-| `GET` | `/:code` | none | FA002, FA005, FC003, FC005 | Resolve & redirect |
-| `POST` | `/api/reports` | anon / user | FC004.1 | Report a link |
+| `GET` | `/:code` | none | FA002, FA005, FC003 | Resolve & redirect |
 | `GET` | `/api/me/links` | user | FA004 | List own link history |
 
 ### Auth & account
@@ -73,11 +72,6 @@ Every mutating `/admin/*` call writes an `audit_logs` entry (FC007).
 | `POST` | `/admin/links/:id/disable` | `link:disable` | FC003.2 | Disable a link |
 | `POST` | `/admin/links/:id/enable` | `link:disable` | FC003.2 | Re-enable a link |
 | `POST` | `/admin/links/:id/expire` | `link:expire` | FC003.3 | Force-expire now |
-| `GET` | `/admin/reports` | `report:read` | FC004.1 | Moderation queue |
-| `POST` | `/admin/reports/:id/resolve` | `report:resolve` | FC004.2 | Resolve / dismiss |
-| `GET` | `/admin/blocklist` | `blocklist:read` | FC005.1 | List blocked domains |
-| `POST` | `/admin/blocklist` | `blocklist:manage` | FC005.1 | Add blocked domain |
-| `DELETE` | `/admin/blocklist/:id` | `blocklist:manage` | FC005.1 | Remove blocked domain |
 | `GET` | `/admin/users` | `user:read` | FC006.1 | List / search users |
 | `GET` | `/admin/users/:id` | `user:read` | FC006 | User detail |
 | `GET` | `/admin/users/:id/links` | `user:read` | FC006.3 | Links owned by user |
@@ -110,7 +104,6 @@ Create a short link. Anonymous or authenticated. Rate-limited per IP (FA006).
 
 **Rules**
 - Accepts `http`/`https` only; rejects malformed and self-referential URLs (FA001.1) → `400 VALIDATION_ERROR`.
-- Destination domain checked against the blocklist (FC005.2) → `400 VALIDATION_ERROR`.
 - `expiresAt` omitted → default TTL (FA005): anonymous = `now + 30d`, authenticated = permanent (`null`).
 - `expiresAt` supplied → anonymous is clamped to ≤ 30 days; authenticated is any future date.
   Past / out-of-range → `400 VALIDATION_ERROR`.
@@ -124,28 +117,13 @@ Resolve a short code and redirect. **Not enveloped** — returns HTTP semantics 
 |---------|--------|
 | Active link | `302` redirect to `original_url` |
 | Expired (`expires_at < now`) | `410 Gone` — "Link expired" page (FA005.3) |
-| Disabled (`status='disabled'`) or domain blocklisted | `404 Not Found` (FC003.2 / FC005.2) |
+| Disabled (`status='disabled'`) | `404 Not Found` (FC003.2) |
 | Unknown code | `404 Not Found` (FA002.3) |
 
 `302` (not `301`) is deliberate: a cached permanent redirect would bypass the server and break
-per-click counting. Disabled/blocklisted links return `404` (not `410`) so a takedown does not
-confirm the code ever existed. On a successful redirect only: increment `links.click_count` and
-bump `link_daily_stats` (FA002.1).
-
-### `POST /api/reports`
-File a report against a link from the redirect/preview page (FC004.1). Anonymous or user.
-
-**Request:**
-```json
-{ "code": "a1B2c", "reason": "Phishing page impersonating a bank" }
-```
-
-**Response** `201`:
-```json
-{ "success": true, "data": { "id": "rep_123", "status": "open" }, "error": null }
-```
-Creates a `reports` row with `source='user'`, `reporter_user_id` (if signed in) or `reporter_ip`.
-Unknown `code` → `404 NOT_FOUND`.
+per-click counting. Disabled links return `404` (not `410`) so a takedown does not confirm the
+code ever existed. On a successful redirect only: increment `links.click_count` and bump
+`link_daily_stats` (FA002.1).
 
 ### `GET /api/me/links`
 Authenticated user's link history (FA004). Paginated.
@@ -197,12 +175,10 @@ All `/admin/*` require admin+ permission (FC002), a passed 2FA challenge, and wr
 `audit_logs` entry on every mutation (FC007). Forbidden permission → `403 FORBIDDEN`.
 
 ### Dashboard (FC001)
-- `GET /admin/stats` → KPI snapshot: total links, links & clicks today, open reports,
-  rate-limited IPs (count of open `auto_rate_limit` reports).
+- `GET /admin/stats` → KPI snapshot: total links, links & clicks today.
   ```json
   { "success": true, "data": {
-      "totalLinks": 10423, "linksToday": 87, "clicksToday": 1290,
-      "openReports": 5, "rateLimitedIps": 2 }, "error": null }
+      "totalLinks": 10423, "linksToday": 87, "clicksToday": 1290 }, "error": null }
   ```
 - `GET /admin/stats/timeseries?metric=links|clicks&range=30d` → daily series from
   `link_daily_stats` (FC001.2):
@@ -218,26 +194,6 @@ All `/admin/*` require admin+ permission (FC002), a passed 2FA challenge, and wr
   `disabled_reason`, `disabled_by`, `disabled_at` (FC003.2). Disabled links stop resolving (FA002).
 - `POST /admin/links/:id/enable` → restores `status='active'`.
 - `POST /admin/links/:id/expire` → sets `expires_at = now()` to retire immediately (FC003.3).
-
-### Reports & moderation (FC004)
-- `GET /admin/reports?status=open|resolved|dismissed&page=` → moderation queue, newest first.
-  Rows include `id`, `link`, `source` (`user|auto_blocklist|auto_rate_limit`), `reason`, `status`, `createdAt`.
-- `POST /admin/reports/:id/resolve` (FC004.2):
-  ```json
-  { "resolution": "link_disabled", "note": "Confirmed phishing; link disabled." }
-  ```
-  `resolution ∈ {link_disabled, dismissed}`. `link_disabled` also disables the target link
-  (shared mechanics with FC003.2). Sets `status`, `resolution`, `resolution_note`,
-  `resolved_by`, `resolved_at`.
-
-### Blocklist (FC005)
-- `GET /admin/blocklist?page=` → blocked domains with `reason`, `addedBy`, `matchSubdomains`, `createdAt`.
-- `POST /admin/blocklist`:
-  ```json
-  { "domain": "malware.test", "reason": "Malware distribution", "matchSubdomains": true }
-  ```
-  Domain normalized (lowercased, `www.` stripped). Duplicate → `400 VALIDATION_ERROR`.
-- `DELETE /admin/blocklist/:id` → remove a domain.
 
 ### User management (FC006)
 - `GET /admin/users?query=&page=` → browse/search users (FC006.1).

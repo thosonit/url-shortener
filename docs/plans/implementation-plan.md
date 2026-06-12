@@ -10,9 +10,9 @@ Build a URL shortener with three surfaces:
 
 1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA006`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api.md`)
-3. **CMS** — RBAC-governed admin dashboard for links, reports, blocklist, users, audit. (`FC001`–`FC007`)
+3. **CMS** — RBAC-governed admin dashboard for links, users, audit. (`FC001`–`FC003`, `FC006`–`FC007`)
 
-The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled-blocklisted).
+The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled).
 
 ## Architecture overview
 
@@ -56,12 +56,11 @@ Repository pattern for data access; consistent API response envelope (`{ success
 **Goal:** schema + migrations + repositories matching `docs/database.md`.
 
 - [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session`, `VerificationToken` (Auth.js),
-  `TwoFactorBackupCode`, `Link`, `BlocklistDomain`, `Report`, `AuditLog`, `LinkDailyStats`.
-- [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`, `ReportSource`, `ReportStatus`,
-  `ReportResolution`, `ActorType`.
+  `TwoFactorBackupCode`, `Link`, `AuditLog`, `LinkDailyStats`.
+- [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`, `ActorType`.
 - [ ] Indexes: `Link.code` (unique), `Link.(user_id, created_at)`, `Link.anon_session_id`,
-  `Link.expires_at`, `Link.domain`; `Account.(provider, provider_account_id)` (unique);
-  `Report.(status, created_at)`; `AuditLog.created_at`.
+  `Link.expires_at`; `Account.(provider, provider_account_id)` (unique);
+  `AuditLog.created_at`.
 - [ ] `Link.id` is `bigint` autoincrement (base62 source); other ids are cuid.
 - [ ] Initial migration + Prisma client singleton.
 - [ ] Repositories (findById, findByCode, create, update, list).
@@ -76,7 +75,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 - [ ] `lib/shortcode` base62 encode/decode (+ unit tests).
 - [ ] `lib/validation` zod URL schema: http/https only, reject self-referential to `SHORT_DOMAIN`.
 - [ ] `POST /api/links`: validate → insert → `code = base62(id)` → return `{ code, shortUrl, expiresAt }`.
-- [ ] `GET /[code]`: lookup → **302** active · **410** expired · **404** missing/disabled/blocklisted.
+- [ ] `GET /[code]`: lookup → **302** active · **410** expired · **404** missing/disabled.
   On success: atomic `click_count += 1` **and** upsert the day's `LinkDailyStats` row (same transaction).
 - [ ] Create-link UI: input, result with short URL, **copy** action, **QR code** (FA001.x).
 - [ ] Expired (410) friendly page; 404 page for missing/disabled.
@@ -114,18 +113,15 @@ Repository pattern for data access; consistent API response envelope (`{ success
 - [ ] `lib/rbac`: role presets (`user | admin | super_admin`) + `requirePermission` server guard.
 - [ ] `/admin` layout gated server-side; redirect unauthorized.
 - [ ] Dashboard (FC001): KPI cards (total links, clicks, users) + growth chart from `LinkDailyStats`.
-  The "open reports" and "rate-limited IPs" KPIs light up once `Report` lands in Phase 7.
 - [ ] `POST /admin/users/:id/role` role assignment (super_admin only).
 - [ ] 2FA scaffolding for admin sign-in (FC002.x — may defer enforcement).
 
 **Depends on:** Phases 1, 3. **Complexity:** MEDIUM–HIGH.
 
-## Phase 7 — CMS link / reports / blocklist (FC003, FC004, FC005)
+## Phase 7 — CMS link management (FC003)
 
 - [ ] `GET /admin/links` — search/filter + metadata + clicks.
 - [ ] `POST /admin/links/:id/disable` (+ enable, force-expire) with `disabled_reason`/`disabled_by`.
-- [ ] Public report flow + `POST /admin/reports/:id/resolve` (action + note).
-- [ ] `POST /admin/blocklist` domain CRUD; **enforce blocklist at create time** (Phase 2 hook).
 - [ ] Disabled-link behavior on redirect.
 
 **Depends on:** Phase 6. **Complexity:** MEDIUM–HIGH.
@@ -169,7 +165,7 @@ P0 → P1 → P2 ──┬─→ P3 → P4
 | Concurrent `click_count` increments | MEDIUM | Atomic DB increment, not read-modify-write |
 | Anon-claim cookie forgery | MEDIUM | Signed cookie; validate before claim UPDATE |
 | Rate-limit fail-open if Redis down | MEDIUM | Decide fail-open vs fail-closed; alert on Redis loss |
-| Open-redirect / SSRF via stored URL | MEDIUM | http/https only, reject self-referential, enforce blocklist |
+| Open-redirect / SSRF via stored URL | MEDIUM | http/https only, reject self-referential |
 | RBAC bypass on `/admin` | HIGH | Server-side guard on every route + handler, never client-only |
 | Missing audit entries | MEDIUM | Centralized mutation helper that always logs |
 
@@ -179,7 +175,7 @@ Resolved:
 
 - **Code strategy:** store the `code` (`UPDATE code = base62(id)` post-insert) for indexed lookups.
 - **Redirect status:** `302` for active (uncached → click counting works); `410` expired;
-  `404` for missing/disabled/blocklisted (a takedown shouldn't confirm the code existed).
+  `404` for missing/disabled (a takedown shouldn't confirm the code existed).
 
 Still open:
 

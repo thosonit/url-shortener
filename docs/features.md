@@ -18,8 +18,6 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 - [FC001 — Admin dashboard](./features/FC001-cms-dashboard.md) — KPIs · growth charts
 - [FC002 — RBAC / permissions](./features/FC002-admin-rbac.md) — presets · role assignment · 2FA
 - [FC003 — Link management](./features/FC003-link-management.md) — search · disable/enable · force-expire · clicks
-- [FC004 — Reports & moderation](./features/FC004-reports-moderation.md) — report flow · resolve
-- [FC005 — Blocklist](./features/FC005-blocklist.md) — domain CRUD · enforcement
 - [FC006 — User management](./features/FC006-user-management.md) — list · suspend · view links
 - [FC007 — Audit log](./features/FC007-audit-log.md) — record mutations · read-only view
 
@@ -36,4 +34,6 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 
 ### CMS
 
+- **Reports & moderation** — public report flow + moderation queue; removed from scope.
+- **Blocklist** — banned-domain CRUD + enforcement; removed from scope.
 - Detailed analytics (geo / referrer / device)

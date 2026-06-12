@@ -20,7 +20,7 @@ Decisions not derivable from code live in `docs/`:
 
 - [`docs/features.md`](docs/features.md) — feature map (App `FAxxx` / CMS `FCxxx`, two-tier); detail per feature in [`docs/features/`](docs/features/).
 - [`docs/api.md`](docs/api.md) — REST API reference (public + admin endpoints).
-- [`docs/database.md`](docs/database.md) — data model (users, links, blocklist, reports, audit logs).
+- [`docs/database.md`](docs/database.md) — data model (users, links, audit logs, daily stats).
 - [`docs/technical.md`](docs/technical.md) — core flows (code-gen, anon claim, expiry, rate limiting, RBAC).
 - [`docs/plans/implementation-plan.md`](docs/plans/implementation-plan.md) — phased build plan.
 

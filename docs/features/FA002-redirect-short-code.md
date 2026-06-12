@@ -23,11 +23,11 @@ Resolve a short code and send the visitor to the original destination.
 - Unknown codes return 404 (FA002.3).
 
 ## Related API
-- `GET /:code` → **302** redirect if active / **410** if expired / **404** if not found, disabled, or blocklisted
+- `GET /:code` → **302** redirect if active / **410** if expired / **404** if not found or disabled
 
 ## Notes
 - Active redirects use **`302`** (not `301`): a cached permanent redirect would bypass the server and break click counting (FA002.1).
-- Disabled ([[FC003]]) and blocklisted ([[FC005]]) links return **`404`** — a takedown should not confirm the code existed.
+- Disabled ([[FC003]]) links return **`404`** — a takedown should not confirm the code existed.
 
 ## Related
-- Expiry is determined by [[FA005]]. Disabled/blocklisted links short-circuit to `404` here (see [[FC003]], [[FC005]]).
+- Expiry is determined by [[FA005]]. Disabled links short-circuit to `404` here (see [[FC003]]).

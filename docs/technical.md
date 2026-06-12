@@ -60,8 +60,8 @@ A code resolves to one of four outcomes:
 - **Active** → `302` redirect to `original_url`. `302` (not `301`) is required so the redirect is
   not cached and every click reaches the server for counting.
 - **Expired** (`expires_at < now`) → `410 Gone` with a friendly "Link expired" message.
-- **Disabled or blocklisted** → `404 Not Found`. A takedown should not confirm the code existed,
-  so these are indistinguishable from a never-created code.
+- **Disabled** (`status='disabled'`) → `404 Not Found`. A takedown should not confirm the code
+  existed, so it is indistinguishable from a never-created code.
 - **Unknown** → `404 Not Found`.
 
 ## Expiry handling
