@@ -53,37 +53,23 @@ Custom alias / vanity URLs, password-protected links, bulk creation, UTM builder
 
 ## Tech stack plan
 
-Example technology stacks that work well together:
+### Recommended (start here)
 
-- [ ] Minimal MVP stack
-  - Web: Next.js
-  - API: Fastify
-  - CMS: Custom admin panel
-  - Storage: PostgreSQL
-- [ ] Full JavaScript stack
-  - Web: Next.js
-  - App: React Native / Expo
-  - API: NestJS
-  - CMS: Strapi
-  - Storage: PostgreSQL
-- [ ] Opinionated server-driven stack
-  - Web: Remix
-  - App: Ionic / Capacitor
-  - API: Node + Express
-  - CMS: Keystone
-  - Storage: PostgreSQL
-- [ ] Modern frontend + backend
-  - Web: SvelteKit
-  - App: Flutter
-  - API: Fastify
-  - CMS: Sanity
-  - Storage: Redis + PostgreSQL
-- [ ] Analytics-first stack
-  - Web: SvelteKit
-  - App: React Native / Expo
-  - API: NestJS
-  - CMS: Sanity
-  - Storage: Redis + PostgreSQL
+| Layer | Choice |
+|-------|--------|
+| Web + CMS | Next.js (App Router, React, TypeScript) |
+| API | Next.js Route Handlers |
+| ORM | Prisma |
+| Database | PostgreSQL |
+| Cache / rate limit | Redis |
+| Auth | Auth.js (NextAuth) |
+| App (later) | React Native / Expo |
+
+### Alternative stacks
+
+- **Dedicated API service** — Web: Next.js · API: NestJS or Fastify · ORM: Prisma · Storage: Redis + PostgreSQL
+- **Server-driven** — Web: Remix · API: Node + Express · CMS: Keystone · Storage: PostgreSQL
+- **Svelte ecosystem** — Web: SvelteKit · App: Flutter · API: Fastify · Storage: Redis + PostgreSQL
 
 ## License
 
