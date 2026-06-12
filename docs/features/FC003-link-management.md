@@ -11,7 +11,7 @@ Let admins search, inspect, and act on any link in the system.
 | ID | Sub-feature | Detail |
 |----|-------------|--------|
 | FC003.1 | Search / filter | By code, URL, owner, or status. |
-| FC003.2 | Disable / enable | Flip `links.status` (`active \| disabled`) with `disabled_reason`, `disabled_by`. |
+| FC003.2 | Disable / enable | Flip `links.status` (`active \| disabled`). |
 | FC003.3 | Force-expire | Set `expires_at` to now to retire a link immediately. |
 | FC003.4 | View clicks | Inspect a link's `click_count`. |
 

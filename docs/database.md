@@ -96,9 +96,7 @@ Table links {
   anon_session_id text [note: 'signed session id, for claim-on-sign-in (FA003.2)']
   expires_at      timestamptz [note: 'null = permanent; default rules in FA005']
   click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA002.1)']
-  status          link_status [not null, default: 'active', note: 'FC003.2']
-  disabled_reason text [note: 'shown in admin link detail (FC003.4)']
-  disabled_by     text [ref: > users.id, note: 'admin actor, shown in detail (FC003.2/.4)']
+  status          link_status [not null, default: 'active', note: 'FC003.2; disable = status-only, no reason/actor stored']
   created_at      timestamptz [not null, default: `now()`, note: 'history order (FA004), shown in lists']
 
   Indexes {

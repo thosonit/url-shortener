@@ -164,9 +164,8 @@ All `/admin/*` require admin+ permission (FC002). Forbidden permission → `403 
 ### Link management (FC003)
 - `GET /admin/links?query=&status=&owner=&page=` → search by code/URL/owner/status (FC003.1).
   Each row includes `code`, `originalUrl`, `owner`, `status`, `clickCount`, `expiresAt`, `createdAt`.
-- `GET /admin/links/:id` → full detail incl. `clickCount`, `disabledReason`, `disabledBy` (FC003.4).
-- `POST /admin/links/:id/disable` `{ "reason": "Phishing" }` → sets `status='disabled'`,
-  `disabled_reason`, `disabled_by` (FC003.2). Disabled links stop resolving (FA002).
+- `GET /admin/links/:id` → full detail incl. `clickCount` and lifecycle state (FC003.4).
+- `POST /admin/links/:id/disable` → sets `status='disabled'` (FC003.2). Disabled links stop resolving (FA002).
 - `POST /admin/links/:id/enable` → restores `status='active'`.
 - `POST /admin/links/:id/expire` → sets `expires_at = now()` to retire immediately (FC003.3).
 

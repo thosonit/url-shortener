@@ -122,7 +122,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 ## Phase 7 — CMS link management (FC003)
 
 - [ ] `GET /admin/links` — search/filter + metadata + clicks.
-- [ ] `POST /admin/links/:id/disable` (+ enable, force-expire) with `disabled_reason`/`disabled_by`.
+- [ ] `POST /admin/links/:id/disable` (+ enable, force-expire) — status-only.
 - [ ] Disabled-link behavior on redirect.
 
 **Depends on:** Phase 6. **Complexity:** MEDIUM–HIGH.
