@@ -54,19 +54,17 @@ Table users {
 
 // Auth.js adapter — one row per linked OAuth identity (FA003).
 // (provider, provider_account_id) replaces the old google_sub.
+// Sign-in only: we never call Google APIs, so the provider token columns
+// (access_token, refresh_token, id_token, expires_at, token_type, scope,
+// session_state) are intentionally dropped — they would never be read.
+// Requires overriding the adapter's `linkAccount` to strip those fields before
+// insert, else Prisma rejects the extra keys the provider returns.
 Table accounts {
   id                  text [pk]
   user_id             text [not null, ref: > users.id, note: 'cascade delete']
-  type                text [not null]
+  type                text [not null, note: 'oauth | oidc']
   provider            text [not null, note: 'e.g. google']
-  provider_account_id text [not null, note: 'OAuth subject (sub)']
-  refresh_token       text
-  access_token        text
-  expires_at          integer
-  token_type          text
-  scope               text
-  id_token            text
-  session_state       text
+  provider_account_id text [not null, note: 'OAuth subject (sub); login lookup key']
 
   Indexes {
     (provider, provider_account_id) [unique]
