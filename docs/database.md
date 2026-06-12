@@ -36,16 +36,16 @@ Enum link_status {
 
 // Application user + role/permission anchor (FA003, FC002, FC006).
 // Provider identity lives in `accounts`, never here (multi-provider ready).
+// Trimmed to fields the app reads: no name/image/email_verified profile mirror
+// (sign-in only — never displayed; `email` is the identity shown in CMS).
+// Requires overriding the adapter's `createUser`/`updateUser` to strip
+// `name`/`image`/`emailVerified` before insert, else Prisma rejects them.
 Table users {
-  id                  text [pk, note: 'cuid (Auth.js)']
-  email               citext [unique, not null, note: 'case-insensitive']
-  email_verified      timestamptz [note: 'Auth.js field']
-  display_name        text
-  image_url           text
-  role                user_role [not null, default: 'user', note: 'FC002.1']
-  status              user_status [not null, default: 'active', note: 'FC006.2']
-  created_at          timestamptz [not null, default: `now()`]
-  updated_at          timestamptz [not null, default: `now()`]
+  id          text [pk, note: 'cuid (Auth.js)']
+  email       citext [unique, not null, note: 'case-insensitive; identity + admin search (FC006.1)']
+  role        user_role [not null, default: 'user', note: 'FC002.1']
+  status      user_status [not null, default: 'active', note: 'FC006.2']
+  created_at  timestamptz [not null, default: `now()`, note: 'user-list ordering (FC006.1)']
 
   Indexes {
     role [note: 'admin filtering']

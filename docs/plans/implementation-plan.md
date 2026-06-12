@@ -83,8 +83,9 @@ Repository pattern for data access; consistent API response envelope (`{ success
 ## Phase 3 — Auth & history (FA003, FA004)
 
 - [ ] Auth.js with Google provider; identity via `accounts(provider, provider_account_id)` → `User` upsert.
-- [ ] Override adapter `linkAccount` to strip provider token fields (`access_token`, `refresh_token`,
-  `id_token`, `expires_at`, `token_type`, `scope`, `session_state`) — sign-in only, `accounts` doesn't store them.
+- [ ] Override adapter `linkAccount` (strip provider token fields: `access_token`, `refresh_token`,
+  `id_token`, `expires_at`, `token_type`, `scope`, `session_state`) and `createUser`/`updateUser`
+  (strip `name`, `image`, `emailVerified`) — sign-in only; `accounts`/`users` don't store them.
 - [ ] `GET /api/auth/signin/google` + `GET /api/auth/callback/google` (session + anon-link claim).
 - [ ] `GET /api/me/links` (auth-gated): original URL, code, clicks, expiry status, created date.
 - [ ] History UI page.

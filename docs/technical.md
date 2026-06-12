@@ -33,8 +33,8 @@ single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
   additive change later.
 - Upsert on callback: find `accounts(provider='google', provider_account_id=:sub)` → its
   `users` row; if absent, create both (user + account) and link them.
-- `users` holds app concerns only: `role`, `status`, profile mirror (`email`,
-  `display_name`, `image_url`).
+- `users` holds app concerns only: `email` (identity), `role`, `status`. No name/image
+  profile mirror — sign-in only, never displayed.
 - Admin sessions use a shorter session TTL than regular users.
 
 ## Anonymous session / link claim
