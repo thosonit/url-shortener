@@ -14,7 +14,7 @@ Give admins a centralized operational overview at a glance.
 
 ## Acceptance criteria
 - Admins see system-health metrics at a glance (FC001.1).
-- Dashboard links to link management, users, and audit.
+- Dashboard links to link management and users.
 
 ## Related
-- Feeds from [[FC003]], [[FC006]], [[FC007]]. Gated by [[FC002]].
+- Feeds from [[FC003]], [[FC006]]. Gated by [[FC002]].

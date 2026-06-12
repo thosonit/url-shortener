@@ -2,7 +2,7 @@
 // Derived from docs/features.md. Stack: PostgreSQL + Prisma + Auth.js.
 // Redis holds ephemeral state only (rate-limit counters, cache) — not modeled here.
 //
-// Minimal in-scope schema: FA001–FA006, FC001–FC003, FC006, FC007.
+// Minimal in-scope schema: FA001–FA006, FC001–FC003, FC006.
 // Render at https://dbdiagram.io or with `@dbml/cli`.
 
 Project url_shortener {
@@ -30,11 +30,6 @@ Enum link_status {
   disabled
 }
 
-Enum actor_type {
-  user
-  system
-}
-
 //============================================================
 // Identity & auth
 //============================================================
@@ -48,7 +43,7 @@ Table users {
   display_name        text
   image_url           text
   role                user_role [not null, default: 'user', note: 'FC002.1']
-  status              user_status [not null, default: 'active', note: 'FC006.2; who/why/when in audit_logs']
+  status              user_status [not null, default: 'active', note: 'FC006.2']
   created_at          timestamptz [not null, default: `now()`]
   updated_at          timestamptz [not null, default: `now()`]
 
@@ -115,28 +110,6 @@ Table links {
     anon_session_id [note: 'claim, FA003.2 (where not null)']
     expires_at [note: 'TTL sweeps, FA005 (where not null)']
     status [note: 'admin filter/search, FC003.1 (pair pg_trgm on code/original_url)']
-  }
-}
-
-//============================================================
-// Audit
-//============================================================
-
-// Immutable record of every mutating admin/system action (FC007). Append-only.
-Table audit_logs {
-  id          text [pk]
-  actor_id    text [ref: > users.id, note: 'null = system action']
-  actor_type  actor_type [not null, default: 'user']
-  action      text [not null, note: 'dotted verb: link.disable, role.assign, user.suspend']
-  target_type text [not null, note: 'link | user | ...']
-  target_id   text [not null, note: 'stringified; links cast from bigint']
-  metadata    jsonb [not null, default: `'{}'`, note: 'before/after, reason, request ip']
-  created_at  timestamptz [not null, default: `now()`]
-
-  Indexes {
-    created_at [note: 'desc']
-    (target_type, target_id)
-    actor_id
   }
 }
 

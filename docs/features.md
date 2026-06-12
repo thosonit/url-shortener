@@ -19,7 +19,6 @@ carry their own IDs (e.g. `FA001.1`). Features are grouped by surface — **App 
 - [FC002 — RBAC / permissions](./features/FC002-admin-rbac.md) — presets · role assignment · admin session hardening
 - [FC003 — Link management](./features/FC003-link-management.md) — search · disable/enable · force-expire · clicks
 - [FC006 — User management](./features/FC006-user-management.md) — list · suspend · view links
-- [FC007 — Audit log](./features/FC007-audit-log.md) — record mutations · read-only view
 
 ## Out of scope
 

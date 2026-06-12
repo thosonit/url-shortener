@@ -10,7 +10,7 @@ Build a URL shortener with three surfaces:
 
 1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA001`–`FA006`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api.md`)
-3. **CMS** — RBAC-governed admin dashboard for links, users, audit. (`FC001`–`FC003`, `FC006`–`FC007`)
+3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC001`–`FC003`, `FC006`)
 
 The two operations everything builds on: **shorten** (long URL → `base62(id)` code) and **redirect** (code → original URL, 302 active / 410 expired / 404 missing-disabled).
 
@@ -34,7 +34,7 @@ apps/web (Next.js App Router)
 └── prisma/                   # schema.prisma + migrations + seed
 ```
 
-Repository pattern for data access; consistent API response envelope (`{ success, data, error, meta }`, per [`api.md`](../api.md)); server-side permission checks on every `/admin` route; audit log on every admin mutation.
+Repository pattern for data access; consistent API response envelope (`{ success, data, error, meta }`, per [`api.md`](../api.md)); server-side permission checks on every `/admin` route.
 
 ---
 
@@ -55,12 +55,10 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Goal:** schema + migrations + repositories matching `docs/database.md`.
 
-- [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session` (Auth.js),
-  `Link`, `AuditLog`.
-- [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`, `ActorType`.
+- [ ] `prisma/schema.prisma` models: `User`, `Account`, `Session` (Auth.js), `Link`.
+- [ ] Enums: `UserRole`, `UserStatus`, `LinkStatus`.
 - [ ] Indexes: `Link.code` (unique), `Link.(user_id, created_at)`, `Link.anon_session_id`,
-  `Link.expires_at`; `Account.(provider, provider_account_id)` (unique);
-  `AuditLog.created_at`.
+  `Link.expires_at`; `Account.(provider, provider_account_id)` (unique).
 - [ ] `Link.id` is `bigint` autoincrement (base62 source); other ids are cuid.
 - [ ] Initial migration + Prisma client singleton.
 - [ ] Repositories (findById, findByCode, create, update, list).
@@ -126,11 +124,9 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 6. **Complexity:** MEDIUM–HIGH.
 
-## Phase 8 — User management & audit log (FC006, FC007)
+## Phase 8 — User management (FC006)
 
 - [ ] User list, suspend/reactivate, view a user's links.
-- [ ] `AuditLog` write helper; record **every** admin mutation (actor, action, target, metadata JSONB).
-- [ ] Read-only audit log viewer.
 
 **Depends on:** Phases 6–7. **Complexity:** MEDIUM.
 
@@ -167,7 +163,6 @@ P0 → P1 → P2 ──┬─→ P3 → P4
 | Rate-limit fail-open if Redis down | MEDIUM | Decide fail-open vs fail-closed; alert on Redis loss |
 | Open-redirect / SSRF via stored URL | MEDIUM | http/https only, reject self-referential |
 | RBAC bypass on `/admin` | HIGH | Server-side guard on every route + handler, never client-only |
-| Missing audit entries | MEDIUM | Centralized mutation helper that always logs |
 
 ## Decisions
 
@@ -186,5 +181,5 @@ Still open:
 
 - **Unit:** base62, URL validation, rate-limit window, RBAC presets.
 - **Integration:** API route handlers against test DB.
-- **E2E (Playwright):** create→copy→redirect, expired→410, sign-in→claim, admin disable→audit.
+- **E2E (Playwright):** create→copy→redirect, expired→410, sign-in→claim, admin disable.
 - TDD: write failing test first per feature; target ≥ 80% coverage.

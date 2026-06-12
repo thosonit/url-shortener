@@ -5,7 +5,7 @@ Let admins search, inspect, and act on any link in the system.
 
 ## Summary
 - Search and filter across all links.
-- Apply lifecycle actions with an audit trail.
+- Apply lifecycle actions (disable/enable, force-expire).
 
 ## Sub-features
 | ID | Sub-feature | Detail |
@@ -20,7 +20,6 @@ Let admins search, inspect, and act on any link in the system.
 - Disabled links stop resolving at redirect ([[FA002]]) (FC003.2).
 - Force-expire takes effect immediately (FC003.3).
 - Click totals are visible per link (FC003.4).
-- Every mutating action writes an audit entry ([[FC007]]).
 
 ## Related
 - Acts on records from [[FA001]]; reflected in redirect ([[FA002]]) and TTL ([[FA005]]).

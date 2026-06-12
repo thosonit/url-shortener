@@ -34,7 +34,6 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 
 **Errors.** Common `error.code` values: `VALIDATION_ERROR` (400), `UNAUTHENTICATED` (401),
 `FORBIDDEN` (403), `NOT_FOUND` (404), `GONE` (410), `RATE_LIMITED` (429), `INTERNAL` (500).
-Every mutating `/admin/*` call writes an `audit_logs` entry (FC007).
 
 ---
 
@@ -73,7 +72,6 @@ Every mutating `/admin/*` call writes an `audit_logs` entry (FC007).
 | `POST` | `/admin/users/:id/suspend` | `user:suspend` | FC006.2 | Suspend account |
 | `POST` | `/admin/users/:id/unsuspend` | `user:suspend` | FC006.2 | Reinstate account |
 | `POST` | `/admin/users/:id/role` | `role:assign` (super-admin) | FC002.2 | Assign role |
-| `GET` | `/admin/audit` | `audit:read` | FC007.2 | Read audit log |
 
 ---
 
@@ -154,8 +152,7 @@ Standard Auth.js session read and sign-out.
 
 ## CMS / Admin — detail
 
-All `/admin/*` require admin+ permission (FC002) and write an `audit_logs` entry on every
-mutation (FC007). Forbidden permission → `403 FORBIDDEN`.
+All `/admin/*` require admin+ permission (FC002). Forbidden permission → `403 FORBIDDEN`.
 
 ### Dashboard (FC001)
 - `GET /admin/stats` → KPI snapshot: total links, links today.
@@ -182,8 +179,3 @@ mutation (FC007). Forbidden permission → `403 FORBIDDEN`.
 - `POST /admin/users/:id/unsuspend` → restores `status='active'`.
 - `POST /admin/users/:id/role` `{ "role": "admin" }` → assign role. **Super-admin only**
   (`role:assign`, FC002.2); `role ∈ {user, admin, super_admin}`.
-
-### Audit log (FC007)
-- `GET /admin/audit?actor=&targetType=&targetId=&page=` → immutable, read-only event stream
-  (FC007.2). Rows: `actorId`, `actorType`, `action`, `targetType`, `targetId`, `metadata`, `createdAt`.
-  No write/update/delete endpoints exist by design.

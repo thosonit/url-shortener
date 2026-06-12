@@ -44,7 +44,7 @@ single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
 - When the visitor signs in with Google:
   - assign `user_id`
   - clear `expires_at`
-  - keep `anon_session_id` for audit/history if needed
+  - keep `anon_session_id` for history if needed
 
 Example claim update:
 ```sql
@@ -86,4 +86,3 @@ A code resolves to one of four outcomes:
 
 - Enforce permissions server-side for all `/admin` endpoints.
 - Use role presets rather than scattered role checks.
-- Require audit logging for every mutating admin action.

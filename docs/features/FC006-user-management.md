@@ -18,7 +18,6 @@ Let admins oversee user accounts and curb abusive owners.
 - Admins can browse users (FC006.1).
 - Suspending an account blocks its privileged actions; unsuspend restores them (FC006.2).
 - Admins can view a user's links (FC006.3).
-- Suspension changes write audit entries ([[FC007]]).
 
 ## Related
 - Role assignment is a separate concern handled in [[FC002]]. Links shown here come from [[FA001]].

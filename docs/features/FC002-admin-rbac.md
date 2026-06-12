@@ -21,4 +21,4 @@ Enforce admin authorization consistently and server-side across the CMS.
 - Adding a future role = define a new preset, no logic changes.
 
 ## Related
-- Gates every other CMS feature. Role changes are recorded by [[FC007]].
+- Gates every other CMS feature.
