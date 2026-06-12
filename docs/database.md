@@ -97,11 +97,9 @@ Table links {
   expires_at      timestamptz [note: 'null = permanent; default rules in FA005']
   click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA002.1)']
   status          link_status [not null, default: 'active', note: 'FC003.2']
-  disabled_reason text
-  disabled_by     text [ref: > users.id, note: 'admin actor (FC003.2)']
-  disabled_at     timestamptz
-  created_at      timestamptz [not null, default: `now()`]
-  updated_at      timestamptz [not null, default: `now()`]
+  disabled_reason text [note: 'shown in admin link detail (FC003.4)']
+  disabled_by     text [ref: > users.id, note: 'admin actor, shown in detail (FC003.2/.4)']
+  created_at      timestamptz [not null, default: `now()`, note: 'history order (FA004), shown in lists']
 
   Indexes {
     (user_id, created_at) [note: 'history, FA004 (desc)']

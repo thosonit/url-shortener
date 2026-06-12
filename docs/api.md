@@ -166,7 +166,7 @@ All `/admin/*` require admin+ permission (FC002). Forbidden permission → `403 
   Each row includes `code`, `originalUrl`, `owner`, `status`, `clickCount`, `expiresAt`, `createdAt`.
 - `GET /admin/links/:id` → full detail incl. `clickCount`, `disabledReason`, `disabledBy` (FC003.4).
 - `POST /admin/links/:id/disable` `{ "reason": "Phishing" }` → sets `status='disabled'`,
-  `disabled_reason`, `disabled_by`, `disabled_at` (FC003.2). Disabled links stop resolving (FA002).
+  `disabled_reason`, `disabled_by` (FC003.2). Disabled links stop resolving (FA002).
 - `POST /admin/links/:id/enable` → restores `status='active'`.
 - `POST /admin/links/:id/expire` → sets `expires_at = now()` to retire immediately (FC003.3).
 
