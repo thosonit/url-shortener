@@ -27,7 +27,7 @@ Purpose: inspect and manage all links in the system.
 Content:
 - Search and filter by code, URL, owner, status
 - Actions: disable/enable, force-expire, view click history
-- Link metadata including alias and owner
+- Link metadata including owner and status
 
 ## Reports
 

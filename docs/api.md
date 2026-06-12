@@ -5,10 +5,11 @@
 ### `POST /api/links`
 Create a new short link.
 
-Request body:
+Request body (`expiresAt` optional):
 ```json
-{ "url": "https://example.com" }
+{ "url": "https://example.com", "expiresAt": "2026-07-01T00:00:00Z" }
 ```
+When `expiresAt` is omitted, the default TTL applies. Anonymous requests are capped at ≤ 30 days; authenticated requests may set any future date or omit it for a permanent link.
 
 Response:
 ```json
@@ -55,7 +56,7 @@ These are part of the admin surface and should require strict server-side permis
 List links with filtering and metadata.
 
 ### `POST /admin/links/:id/disable`
-Disable a link or alias.
+Disable a link.
 
 ### `POST /admin/reports/:id/resolve`
 Resolve a report with an action and note.

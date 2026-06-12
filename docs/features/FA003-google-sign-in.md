@@ -1,19 +1,34 @@
-# F003 — Google sign-in for saved link management
+# FA003 — Google sign-in
 
 ## Purpose
-Allow users to optionally sign in with Google to save and manage their links.
+Let users optionally sign in with Google to own and manage their links.
 
 ## Summary
 - Provide a Google OAuth sign-in flow.
-- Create or update a user record from the Google profile.
-- Establish an authenticated session.
-- Grant access to persisted link history and permanent links.
-- Claim anonymous links created before sign-in.
+- Create or update a user from the Google profile, then establish a session.
+- On first sign-in within a session, claim the anonymous links created in that session.
+
+## Sub-features
+| ID | Sub-feature | Detail |
+|----|-------------|--------|
+| FA003.1 | OAuth flow + user upsert | Sign in with Google; upsert `users` by `google_sub`; establish an authenticated session. |
+| FA003.2 | Anonymous link claim | On first sign-in, assign `user_id` and clear `expires_at` for links carrying the visitor's `anon_session_id`. |
+
+## Claim mechanism (FA003.2)
+Each visitor holds a signed `anon_session_id` cookie; anonymous links store it. On first sign-in:
+```sql
+UPDATE links
+SET user_id = :userId, expires_at = NULL
+WHERE anon_session_id = :anonId AND user_id IS NULL;
+```
 
 ## Acceptance criteria
-- Users can sign in with Google.
-- Authenticated users can see saved links and history.
-- Anonymous links created in the current session can be claimed.
+- Users can sign in with Google (FA003.1).
+- Anonymous links from the current session are claimed on sign-in and become permanent (FA003.2).
+- After claim, the links appear in history ([[FA004]]).
 
 ## Related API
-- `POST /api/auth/google`
+- `POST /api/auth/google` + callback → establish session, trigger claim
+
+## Related
+- Claim flips TTL handled by [[FA005]]; claimed links surface in [[FA004]].

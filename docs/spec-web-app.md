@@ -28,6 +28,8 @@
 | 10 | Link claim on sign-in | track anonymous links by session → on sign-in: assign `user_id`, clear `expires_at` |
 | 11 | Minimal rate limiting | cap links per IP per minute to curb anonymous-creation spam |
 | 12 | "Link expired" page | serves feature #2 (410) |
+| 13 | Custom expiration date | optional user-chosen `expires_at`; anonymous capped ≤ 30 days, authenticated free/permanent |
+| 14 | QR code | render a scannable QR for the short URL on the result screen |
 
 ## Data Model (stack-agnostic)
 
@@ -67,7 +69,7 @@ The `id` is only known after insert, so `code` can only be computed afterward. T
 
 ## Minimal API
 
-- `POST /api/links` `{ url }` → `{ code, shortUrl, expiresAt }` — *rate-limited*
+- `POST /api/links` `{ url, expiresAt? }` → `{ code, shortUrl, expiresAt }` — *rate-limited* (omitted `expiresAt` → default TTL; anonymous capped ≤ 30 days)
 - `GET /:code` → 301 redirect / **410** if expired / 404 if not found
 - `GET /api/me/links` → history (auth required)
 - `POST /api/auth/google` + callback → establish session, trigger claim
@@ -95,7 +97,10 @@ The `id` is only known after insert, so `code` can only be computed afterward. T
 - Spammy IP is blocked by rate limiting
 - Malformed URLs are rejected with a clear message
 
-## OUT — deferred to Phase 2
+## OUT of scope
 
-Custom alias · custom expiration (user-chosen date) · detailed analytics (geo/referrer/device) ·
-CMS admin (see [spec-cms.md](./spec-cms.md)) · QR/password/bulk/UTM/API key · editing the destination URL.
+- **Custom alias / vanity URLs** — removed from the development scope.
+- Detailed analytics (geo/referrer/device) · password/bulk/UTM/API key · editing the destination URL.
+
+> The CMS surface lives in [spec-cms.md](./spec-cms.md). For the canonical, two-tier
+> breakdown of every feature, see the [Feature index](./features.md).

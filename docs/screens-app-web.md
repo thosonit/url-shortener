@@ -13,9 +13,11 @@ Purpose: let users shorten a URL quickly.
 
 Content:
 - Input field for the original URL
+- Optional expiration-date picker (anonymous capped ≤ 30 days; authenticated free/permanent)
 - Submit button
-- Validation errors for invalid URLs or self-referential links
+- Validation errors for invalid URLs, self-referential links, or out-of-range expiry dates
 - Copy button for the generated short link
+- QR code for the generated short link on the result
 - Optional Google sign-in call-to-action
 - Anonymous usage explanation and expiry note
 
