@@ -10,6 +10,7 @@ short mnemonic for the function) is a deliverable unit; sub-features carry their
 - [FA-REDIRECT — Redirect short code](./features/FA-REDIRECT-redirect-short-code.md) — click count · 410 expired · 404
 - [FA-SIGNIN — Google sign-in](./features/FA-SIGNIN-google-sign-in.md) — OAuth · anonymous link claim
 - [FA-HISTORY — Link history](./features/FA-HISTORY-link-history.md) — list own links (auth)
+- [FA-MANAGE — Manage own links](./features/FA-MANAGE-manage-own-links.md) — edit destination · disable/enable · delete (auth, owner)
 - [FA-EXPIRY — Link expiration / TTL](./features/FA-EXPIRY-link-expiration-ttl.md) — anon 30d · user permanent · custom expiry date · enforcement
 
 ## CMS features
@@ -29,8 +30,6 @@ short mnemonic for the function) is a deliverable unit; sub-features carry their
 - Bulk creation
 - UTM builder
 - API keys
-- Editing the destination URL
-- Deleting or editing your own links (user-initiated)
 
 ### CMS
 

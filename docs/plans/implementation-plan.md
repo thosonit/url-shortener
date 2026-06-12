@@ -8,7 +8,7 @@
 
 Build a URL shortener with three surfaces:
 
-1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, set expiry. (`FA-SHORTEN`–`FA-EXPIRY`)
+1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, manage own links (edit / disable / delete), set expiry. (`FA-SHORTEN`–`FA-EXPIRY`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api/`)
 3. **CMS** — RBAC-governed admin dashboard for links and users. (`FC-DASH`–`FC-LINKS`, `FC-USERS`)
 
@@ -79,7 +79,7 @@ Repository pattern for data access; consistent API response envelope (`{ success
 
 **Depends on:** Phase 1. **Complexity:** MEDIUM. **This phase alone is a usable product.**
 
-## Phase 3 — Auth & history (FA-SIGNIN, FA-HISTORY)
+## Phase 3 — Auth, history & owner management (FA-SIGNIN, FA-HISTORY, FA-MANAGE)
 
 - [ ] Auth.js with Google provider; identity via `accounts(provider, provider_account_id)` → `User` upsert.
 - [ ] Override adapter `linkAccount` (strip provider token fields: `access_token`, `refresh_token`,
@@ -87,7 +87,10 @@ Repository pattern for data access; consistent API response envelope (`{ success
   (strip `name`, `image`, `emailVerified`) — sign-in only; `accounts`/`users` don't store them.
 - [ ] `GET /api/auth/signin/google` + `GET /api/auth/callback/google` (session + anon-link claim).
 - [ ] `GET /api/me/links` (auth-gated): original URL, code, clicks, expiry status, created date.
-- [ ] History UI page.
+- [ ] `PATCH /api/me/links/:id` — owner edit destination (re-validate) + disable/enable (FA-MANAGE.1–.2).
+- [ ] `DELETE /api/me/links/:id` — owner hard delete (FA-MANAGE.3). All `/api/me/links/:id` ops
+  filter on `user_id = session user`; non-owned → `404`.
+- [ ] History UI page with per-row edit / disable / delete actions.
 
 **Depends on:** Phases 1–2. **Complexity:** MEDIUM.
 

@@ -28,7 +28,7 @@ servers:
 
 tags:
   - name: Links (public)
-    description: Create links and read your own history (FA-SHORTEN, FA-HISTORY).
+    description: Create links, read your own history, and manage your own links (FA-SHORTEN, FA-HISTORY, FA-MANAGE).
   - name: Redirect
     description: Resolve a short code (FA-REDIRECT, FA-EXPIRY).
   - name: Auth
@@ -128,6 +128,55 @@ paths:
                 meta: { page: 1, limit: 20, total: 7 }
         '401': { $ref: '#/components/responses/Unauthenticated' }
 
+  /api/me/links/{id}:
+    patch:
+      tags: [Links (public)]
+      summary: Edit destination / disable own link
+      description: |
+        Update a link the caller owns (FA-MANAGE.1, FA-MANAGE.2). Send either field:
+
+        - `url` → re-validated (`http`/`https`, non-self-referential, FA-SHORTEN.1) and stored as
+          the new `original_url`. The `code` is unchanged.
+        - `status` → `active` | `disabled`. Disabling makes the redirect return `404`
+          (same status-only mechanism as FC-LINKS.2).
+
+        Scoped to ownership: a link the caller does not own returns `404`, not `403`, so existence
+        is never disclosed.
+      operationId: updateMyLink
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/LinkId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMyLinkRequest'
+            example: { url: https://example.com/new/destination }
+      responses:
+        '200': { $ref: '#/components/responses/MyLinkOk' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Links (public)]
+      summary: Delete own link
+      description: |
+        Hard-delete a link the caller owns (FA-MANAGE.3). The row is removed, the redirect then
+        returns `404`, and the `code` is never reused. Scoped to ownership: a link the caller does
+        not own returns `404`.
+      operationId: deleteMyLink
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '204':
+          description: Link deleted (no body).
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /{code}:
     get:
       tags: [Redirect]
@@ -156,7 +205,7 @@ paths:
               description: The original URL.
               schema: { type: string, format: uri }
         '404':
-          description: Unknown code (FA-REDIRECT.3) or disabled link (FC-LINKS.2).
+          description: Unknown or owner-deleted code (FA-REDIRECT.3, FA-MANAGE.3), or disabled link (FC-LINKS.2, FA-MANAGE.2).
         '410':
           description: Expired link — "Link expired" page (FA-EXPIRY.3).
 
@@ -595,6 +644,15 @@ components:
               - $ref: '#/components/schemas/Envelope'
               - properties:
                   data: { $ref: '#/components/schemas/AdminLinkRow' }
+    MyLinkOk:
+      description: Updated owned link (FA-MANAGE.1, FA-MANAGE.2).
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Envelope'
+              - properties:
+                  data: { $ref: '#/components/schemas/MyLink' }
     AdminUserOk:
       description: Updated user.
       content:
@@ -666,6 +724,21 @@ components:
             Optional. Anonymous callers are clamped to ≤ 30 days; authenticated callers may set
             any future date. Omitted → default TTL (FA-EXPIRY).
           example: '2026-07-01T00:00:00Z'
+    UpdateMyLinkRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Partial update of an owned link (FA-MANAGE). Supply at least one field. `url` edits the
+        destination (FA-MANAGE.1); `status` disables/enables (FA-MANAGE.2).
+      properties:
+        url:
+          type: string
+          format: uri
+          description: New destination. `http`/`https` only, non-self-referential (FA-SHORTEN.1). The `code` is unchanged.
+          example: https://example.com/new/destination
+        status:
+          allOf: [{ $ref: '#/components/schemas/LinkStatus' }]
+          description: '`disabled` makes the redirect return `404`; `active` restores it.'
     CreatedLink:
       type: object
       properties:
@@ -677,8 +750,9 @@ components:
       type: object
       description: |
         A link in the owner's history (FA-HISTORY). The owner resolves three states: `active`,
-        `disabled` (stored `status`, set by an admin via FC-LINKS), and `expired` (derived when
-        `expiresAt` is in the past). The public redirect still returns `404` for disabled links.
+        `disabled` (stored `status`, set by the owner via FA-MANAGE or an admin via FC-LINKS), and
+        `expired` (derived when `expiresAt` is in the past). The public redirect still returns `404`
+        for disabled links.
       properties:
         code: { type: string, example: a1B2c }
         originalUrl: { type: string, format: uri }

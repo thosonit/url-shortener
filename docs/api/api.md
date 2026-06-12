@@ -48,6 +48,8 @@ The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP r
 | `POST` | `/api/links` | anon / user | FA-SHORTEN | Create a short link |
 | `GET` | `/:code` | none | FA-REDIRECT, FA-EXPIRY, FC-LINKS | Resolve & redirect |
 | `GET` | `/api/me/links` | user | FA-HISTORY | List own link history |
+| `PATCH` | `/api/me/links/:id` | user (owner) | FA-MANAGE | Edit destination / disable own link |
+| `DELETE` | `/api/me/links/:id` | user (owner) | FA-MANAGE | Delete own link |
 
 ### Auth & account
 

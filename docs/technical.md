@@ -76,6 +76,24 @@ A code resolves to one of four outcomes:
 - The single `click_count` counter is the MVP for per-link totals. Time-bucketed analytics
   (daily trends, growth charts) and per-click rows (geo/referrer/device) are out of scope.
 
+## Owner link management
+
+Authenticated users manage their own links (FA-MANAGE), mirroring the admin actions in
+[`features/FC-LINKS`](features/FC-LINKS-link-management.md) but scoped to ownership.
+
+- **Ownership gate.** Every action filters on `links.user_id = :sessionUserId`. A row that does
+  not match — another user's link, or a still-anonymous one — is treated as not found and returns
+  `404`, never `403`, so the endpoint never confirms a link the caller doesn't own exists.
+- **Edit destination (FA-MANAGE.1).** Re-run the FA-SHORTEN validation (`http`/`https` only,
+  non-self-referential) on the new URL, then `UPDATE original_url`. The `code` is immutable, so
+  existing short URLs keep resolving to the new destination.
+- **Disable / enable (FA-MANAGE.2).** Flip `status` between `active` and `disabled`. This is the
+  same status-only mechanism as the admin path, so a disabled link returns `404` at redirect —
+  user-disable and admin-disable are indistinguishable to the public, and no separate state is added.
+- **Delete (FA-MANAGE.3).** Hard `DELETE` the row. The redirect then returns `404`, and because
+  `code = base62(id)` over a monotonic identity, the freed code is never reissued. `click_count`
+  is discarded with the row (no soft-delete/audit copy — see [`database.md`](database.md)).
+
 ## User suspension
 
 - Suspending a user (`users.status = 'suspended'`) rejects their session: they cannot create

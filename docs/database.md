@@ -83,19 +83,21 @@ Table sessions {
 // Core link domain
 //============================================================
 
-// Source of truth for the short code and every redirect (FA-SHORTEN, FA-REDIRECT, FA-HISTORY, FA-EXPIRY, FC-LINKS).
+// Source of truth for the short code and every redirect (FA-SHORTEN, FA-REDIRECT, FA-HISTORY, FA-MANAGE, FA-EXPIRY, FC-LINKS).
 // Insert row -> UPDATE code = base62(id) in the same transaction.
 // Resolved state is derived, never stored: active iff
 //   status='active' AND (expires_at IS NULL OR expires_at > now()).
+// Owner delete (FA-MANAGE.3) is a hard delete: the row is removed; `code` is never reused
+// because `id` is a monotonic identity. No soft-delete column.
 Table links {
   id              bigint [pk, increment, note: 'identity; base62 source (FA-SHORTEN.2)']
   code            text [unique, not null, note: 'base62(id), stored on insert']
-  original_url    text [not null, note: 'validated http(s), non-self-referential (FA-SHORTEN.1)']
-  user_id         text [ref: > users.id, note: 'null = anonymous link']
+  original_url    text [not null, note: 'validated http(s), non-self-referential (FA-SHORTEN.1); owner-editable (FA-MANAGE.1)']
+  user_id         text [ref: > users.id, note: 'null = anonymous link; owner scope for FA-MANAGE']
   anon_session_id text [note: 'signed session id, for claim-on-sign-in (FA-SIGNIN.2)']
   expires_at      timestamptz [note: 'null = permanent; default rules in FA-EXPIRY']
   click_count     bigint [not null, default: 0, note: 'incremented on redirect (FA-REDIRECT.1)']
-  status          link_status [not null, default: 'active', note: 'FC-LINKS.2; disable = status-only, no reason/actor stored']
+  status          link_status [not null, default: 'active', note: 'disable = status-only, no reason/actor stored; set by owner (FA-MANAGE.2) or admin (FC-LINKS.2)']
   created_at      timestamptz [not null, default: `now()`, note: 'history order (FA-HISTORY), shown in lists']
 
   Indexes {

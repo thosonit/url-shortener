@@ -5,7 +5,7 @@ Give authenticated users a view of the links they own.
 
 ## Summary
 - List the signed-in user's links with key metadata and status.
-- Read-only history surface; lifecycle actions live elsewhere.
+- Read-only listing surface; owners act on a link via [[FA-MANAGE]] (edit / disable / delete).
 
 ## Sub-features
 | ID | Sub-feature | Detail |
@@ -14,11 +14,11 @@ Give authenticated users a view of the links they own.
 
 ## Acceptance criteria
 - Authenticated users see only their own links (FA-HISTORY.1).
-- Each row shows resolved status: `active`, `expired` (per [[FA-EXPIRY]]), or `disabled` (set by an admin via [[FC-LINKS]]). The owner sees the true state even though the public redirect returns `404` for disabled links.
+- Each row shows resolved status: `active`, `expired` (per [[FA-EXPIRY]]), or `disabled` (set by the owner via [[FA-MANAGE]] or an admin via [[FC-LINKS]]). The owner sees the true state even though the public redirect returns `404` for disabled links.
 - Anonymous users have no history (links auto-expire instead).
 
 ## Related API
 - `GET /api/me/links` → history *(auth required)*
 
 ## Related
-- Ownership is established by [[FA-SIGNIN]]; status reflects [[FA-EXPIRY]].
+- Ownership is established by [[FA-SIGNIN]]; status reflects [[FA-EXPIRY]]; owner actions in [[FA-MANAGE]].
