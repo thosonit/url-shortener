@@ -7,11 +7,14 @@ import it.thoson.GoURL.dto.request.UpdateLinkRequest;
 import it.thoson.GoURL.dto.response.LinkResponse;
 import it.thoson.GoURL.exception.LinkNotFoundException;
 import it.thoson.GoURL.repository.LinkRepository;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 public class LinkService {
 
@@ -25,6 +28,7 @@ public class LinkService {
 
     @Transactional
     public LinkResponse createForUser(CreateLinkRequest request, String userId, String baseUrl) {
+        log.info("Creating link for user {} with URL {}", userId, request.url());
         Link link = Link.forUser(request.url(), userId);
         link.setCode(codeGenerator.generate(request.url()));
         if (request.expiresAt() != null) {
@@ -35,6 +39,7 @@ public class LinkService {
 
     @Transactional
     public LinkResponse createForAnon(CreateLinkRequest request, String baseUrl) {
+        log.info("Creating link for anonymous user with URL {}", request.url());
         String anonSessionId = request.anonSessionId();
         Link link = Link.forAnon(request.url(), anonSessionId);
         link.setCode(codeGenerator.generate(request.url()));
@@ -46,18 +51,17 @@ public class LinkService {
         Link link = linkRepository.findByCode(code)
                 .orElseThrow(() -> new LinkNotFoundException(code));
 
-        if (link.getStatus() == LinkStatus.EXPIRED) {
+        if (link.getStatus() == LinkStatus.disabled) {
             throw new it.thoson.GoURL.exception.LinkDisabledException(code);
         }
-        if (link.getStatus() == LinkStatus.EXPIRED) {
-            throw new it.thoson.GoURL.exception.LinkExpiredException(code);
-        }
 
+        log.info("Resolving original URL for code {}", code);
         return link.getOriginalUrl();
     }
 
     @Transactional
     public void incrementClick(String code) {
+        log.info("Incrementing click count for code {}", code);
         Link link = linkRepository.findByCode(code)
                 .orElseThrow(() -> new LinkNotFoundException(code));
         linkRepository.incrementClickCount(link.getId());
@@ -84,7 +88,7 @@ public class LinkService {
             link.setOriginalUrl(request.url());
         }
         if (request.disabled() != null) {
-            link.setStatus(request.disabled() ? LinkStatus.INACTIVE : LinkStatus.ACTIVE);
+            link.setStatus(request.disabled() ? LinkStatus.disabled : LinkStatus.active);
         }
         if (request.expiresAt() != null) {
             link.setExpiresAt(request.expiresAt());

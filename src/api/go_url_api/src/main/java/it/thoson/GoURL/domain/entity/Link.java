@@ -2,6 +2,10 @@ package it.thoson.GoURL.domain.entity;
 
 import it.thoson.GoURL.domain.enums.LinkStatus;
 import jakarta.persistence.*;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -27,9 +31,9 @@ public class Link {
     @Column(name = "click_count", nullable = false)
     private int clickCount = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private LinkStatus status = LinkStatus.ACTIVE;
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", nullable = false, columnDefinition = "link_status")
+    private LinkStatus status = LinkStatus.active;
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
@@ -58,20 +62,67 @@ public class Link {
         createdAt = LocalDateTime.now();
     }
 
-    public Long getId() { return id; }
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
-    public String getOriginalUrl() { return originalUrl; }
-    public void setOriginalUrl(String originalUrl) { this.originalUrl = originalUrl; }
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-    public String getAnonSessionId() { return anonSessionId; }
-    public void setAnonSessionId(String anonSessionId) { this.anonSessionId = anonSessionId; }
-    public int getClickCount() { return clickCount; }
-    public void setClickCount(int clickCount) { this.clickCount = clickCount; }
-    public LinkStatus getStatus() { return status; }
-    public void setStatus(LinkStatus status) { this.status = status; }
-    public LocalDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getOriginalUrl() {
+        return originalUrl;
+    }
+
+    public void setOriginalUrl(String originalUrl) {
+        this.originalUrl = originalUrl;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getAnonSessionId() {
+        return anonSessionId;
+    }
+
+    public void setAnonSessionId(String anonSessionId) {
+        this.anonSessionId = anonSessionId;
+    }
+
+    public int getClickCount() {
+        return clickCount;
+    }
+
+    public void setClickCount(int clickCount) {
+        this.clickCount = clickCount;
+    }
+
+    public LinkStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(LinkStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(LocalDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

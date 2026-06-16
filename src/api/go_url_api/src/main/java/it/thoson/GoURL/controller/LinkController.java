@@ -12,10 +12,13 @@ import java.util.ArrayList;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "Link Management", description = "Endpoints for creating, updating, and deleting links")
 @RestController
 @RequestMapping("/api/links")
 public class LinkController {
@@ -27,7 +30,8 @@ public class LinkController {
     }
 
     // POST /api/links
-    @PostMapping()
+    @Operation(summary = "Create a new short link", description = "Creates a new short link for the given original URL. Supports both authenticated users and anonymous sessions.")
+    @PostMapping("/api/links")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<LinkResponse> createLink(
             @Valid @RequestBody CreateLinkRequest request,
@@ -40,12 +44,6 @@ public class LinkController {
                 : linkService.createForUser(request, resolveUserId(httpRequest), baseUrl);
 
         return ApiResponse.ok(response);
-    }
-
-    @GetMapping("/{code}")
-    public ApiResponse<String> resolveLink(@PathVariable String code) {
-        String originalUrl = linkService.resolveOriginalUrl(code);
-        return ApiResponse.ok(originalUrl);
     }
 
     @GetMapping("/me/links")

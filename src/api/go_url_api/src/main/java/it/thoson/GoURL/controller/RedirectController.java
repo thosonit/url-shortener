@@ -6,8 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.io.IOException;
 
+@Tag(name = "Redirection", description = "Endpoint for redirecting short URLs to their original URLs")
 @RestController
 public class RedirectController {
 
@@ -17,7 +21,7 @@ public class RedirectController {
         this.linkService = linkService;
     }
 
-    // GET /{code} — redirect tới URL gốc
+    @Operation(summary = "Redirect to original URL", description = "Redirects a short URL to its original URL. Increments click count for analytics.")
     @GetMapping("/{code}")
     public void redirect(@PathVariable String code, HttpServletResponse response) throws IOException {
         String originalUrl = linkService.resolveOriginalUrl(code);
