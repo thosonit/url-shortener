@@ -31,7 +31,7 @@ public class LinkController {
 
     // POST /api/links
     @Operation(summary = "Create a new short link", description = "Creates a new short link for the given original URL. Supports both authenticated users and anonymous sessions.")
-    @PostMapping("/api/links")
+    @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<LinkResponse> createLink(
             @Valid @RequestBody CreateLinkRequest request,
@@ -46,7 +46,7 @@ public class LinkController {
         return ApiResponse.ok(response);
     }
 
-    @GetMapping("/me/links")
+    @GetMapping()
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ArrayList<LinkResponse>> myLinks(HttpServletRequest httpRequest) {
         String baseUrl = resolveBaseUrl(httpRequest);
