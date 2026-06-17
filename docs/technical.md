@@ -46,7 +46,12 @@ Insert directly with the provided code.
 
 ## Anonymous session / link claim
 
-- Issue an `anon_session_id` in a signed cookie for anonymous visitors.
+- `anon_session_id` is always **server-generated** (UUID v4, cryptographically random). The client
+  never generates or reads this value — a client-supplied ID could be used to claim another
+  user's links.
+- Issued as an `HttpOnly`, `Secure`, `SameSite=Lax` signed cookie.
+- **Lazy issuance:** the cookie is set only when the user creates their first anonymous link, not
+  on every visit. Visitors who never shorten a URL get no session.
 - Store `anon_session_id` on anonymous `links`.
 - Anonymous sessions are capped at **10 links per session** to limit abuse.
 - When the visitor signs in with Google, all unclaimed links are claimed in a single transaction
