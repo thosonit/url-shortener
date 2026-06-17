@@ -1,83 +1,73 @@
 # API Reference
 
-REST surface for the URL shortener, derived from [`features.md`](../features.md) and the data
-contract in [`database.md`](../database.md). Two surfaces:
+Two surfaces:
+- **App** (`/api/*`, `/:code`) — anonymous or authenticated user.
+- **Admin** (`/api/admin/*`) — `admin` or `super_admin` role.
 
-- **App / Public** (`/api/*`, `/:code`) — anonymous or user session.
-- **CMS / Admin** (`/admin/*`) — admin+ permission, enforced server-side (FC-RBAC).
+Full request/response schemas live in [`openapi.yaml`](openapi.yaml).
 
-> **Per-endpoint contract → Swagger.** This page is the index: conventions, auth, and the
-> endpoint list. Full request/response schemas, status codes, and examples live in the
-> OpenAPI 3.1 spec [`openapi.yaml`](openapi.yaml) — load it into Swagger UI / Redoc, or
-> render with `npx @redocly/cli preview-docs docs/api/openapi.yaml`.
+---
 
 ## Conventions
 
-**Base & format.** JSON over HTTPS; request and response bodies are `application/json`.
-The redirect endpoint `GET /:code` is the only non-JSON route (it returns HTTP redirects/pages).
+**Format.** JSON over HTTPS (`application/json`). `GET /:code` is the only non-JSON route.
 
-**Response envelope.** Every JSON endpoint returns a consistent envelope:
-
+**Response envelope.**
 ```json
-{ "success": true,  "data": { }, "error": null, "meta": { } }
-{ "success": false, "data": null, "error": { "code": "STRING_CODE", "message": "Human readable" } }
+{ "success": true,  "data": {},   "error": null }
+{ "success": false, "data": null, "error": { "code": "STRING_CODE", "message": "..." } }
 ```
+List endpoints include `"meta": { "page": 1, "limit": 20, "total": 137 }`.
 
-`meta` is present on list endpoints for pagination: `{ "page": 1, "limit": 20, "total": 137 }`.
-
-**Pagination.** List endpoints accept `?page` (1-based) and `?limit` (default 20, max 100).
+**Pagination.** `?page` (1-based), `?limit` (default 20, max 100).
 
 **Auth.**
-- _Anonymous_ — a signed `anon_session_id` cookie is issued on first visit; it ties anonymous
-  links to the browser for later claim (FA-SIGNIN.2).
-- _User session_ — Auth.js session cookie. Required by `/api/me/*`.
-- _Admin_ — `role ∈ {admin, super_admin}` plus a shorter session TTL (FC-RBAC.3). Required by all
-  `/admin/*`. Checks are by **permission**, not role string (FC-RBAC.1).
+- _Anonymous_ — server issues a JWT on first request; ties anonymous links to the client.
+- _User_ — JWT with `role: user`. Required by `/api/links/*`.
+- _Admin_ — JWT with `role: admin | super_admin`. Required by `/api/admin/*`.
+- _Super admin_ — email + password login at `POST /api/auth/login`.
 
-**Errors.** Common `error.code` values: `VALIDATION_ERROR` (400), `UNAUTHENTICATED` (401),
-`FORBIDDEN` (403), `NOT_FOUND` (404), `GONE` (410), `INTERNAL` (500).
+**Error codes.** `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN` 403 · `NOT_FOUND` 404 · `GONE` 410 · `INTERNAL` 500.
 
 ---
 
-## Endpoint index
+## Endpoints
 
-### App / Public
+### Public
 
-| Method | Path | Auth | Feature | Purpose |
-|--------|------|------|---------|---------|
-| `POST` | `/api/links` | anon / user | FA-SHORTEN | Create a short link |
-| `GET` | `/:code` | none | FA-REDIRECT, FA-EXPIRY, FC-LINKS | Resolve & redirect |
-| `GET` | `/api/me/links` | user | FA-HISTORY | List own link history |
-| `PATCH` | `/api/me/links/:id` | user (owner) | FA-MANAGE | Edit destination / disable own link |
-| `DELETE` | `/api/me/links/:id` | user (owner) | FA-MANAGE | Delete own link |
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/:code` | — | Resolve & redirect |
 
-### Auth & account
+### Auth
 
-| Method | Path | Auth | Feature | Purpose |
-|--------|------|------|---------|---------|
-| `GET` | `/api/auth/signin/google` | none | FA-SIGNIN.1 | Begin Google OAuth |
-| `GET` | `/api/auth/callback/google` | none | FA-SIGNIN | OAuth callback + anon-link claim |
-| `GET` | `/api/auth/session` | any | FA-SIGNIN | Current session |
-| `POST` | `/api/auth/signout` | user | FA-SIGNIN | End session |
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/api/auth/login` | — | Email + password login (admin/super_admin) |
+| `GET` | `/api/auth/google` | — | Begin Google OAuth |
+| `GET` | `/api/auth/google/callback` | — | OAuth callback + anon-link claim |
+| `POST` | `/api/auth/refresh` | — | Refresh access token |
+| `POST` | `/api/auth/logout` | user | Invalidate refresh token |
 
-### CMS / Admin
+### Links (user)
 
-| Method | Path | Permission | Feature | Purpose |
-|--------|------|-----------|---------|---------|
-| `GET` | `/admin/stats` | `dashboard:read` | FC-DASH.1 | KPI snapshot |
-| `GET` | `/admin/links` | `link:read` | FC-LINKS.1 | Search / filter links |
-| `GET` | `/admin/links/:id` | `link:read` | FC-LINKS.4 | Link detail + clicks |
-| `POST` | `/admin/links/:id/disable` | `link:disable` | FC-LINKS.2 | Disable a link |
-| `POST` | `/admin/links/:id/enable` | `link:disable` | FC-LINKS.2 | Re-enable a link |
-| `POST` | `/admin/links/:id/expire` | `link:expire` | FC-LINKS.3 | Force-expire now |
-| `GET` | `/admin/users` | `user:read` | FC-USERS.1 | List / search users |
-| `GET` | `/admin/users/:id` | `user:read` | FC-USERS | User detail |
-| `GET` | `/admin/users/:id/links` | `user:read` | FC-USERS.3 | Links owned by user |
-| `POST` | `/admin/users/:id/suspend` | `user:suspend` | FC-USERS.2 | Suspend account |
-| `POST` | `/admin/users/:id/unsuspend` | `user:suspend` | FC-USERS.2 | Reinstate account |
-| `POST` | `/admin/users/:id/role` | `role:assign` (super-admin) | FC-RBAC.2 | Assign role |
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/api/links` | anon / user | Create a short link |
+| `GET` | `/api/links` | user | List own links |
+| `PATCH` | `/api/links/:id` | user (owner) | Edit destination or status |
+| `DELETE` | `/api/links/:id` | user (owner) | Delete own link |
 
----
+### Admin
 
-Request/response schemas, status codes, and examples for every endpoint above are defined in
-[`openapi.yaml`](openapi.yaml).
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/api/admin/stats` | admin | KPI snapshot |
+| `GET` | `/api/admin/links` | admin | Search / filter all links |
+| `GET` | `/api/admin/links/:id` | admin | Link detail |
+| `PATCH` | `/api/admin/links/:id` | admin | Disable / enable / force-expire |
+| `GET` | `/api/admin/users` | admin | List / search users |
+| `GET` | `/api/admin/users/:id` | admin | User detail |
+| `GET` | `/api/admin/users/:id/links` | admin | Links owned by user |
+| `PATCH` | `/api/admin/users/:id` | admin | Suspend / unsuspend |
+| `PATCH` | `/api/admin/users/:id/role` | super_admin | Assign role |
