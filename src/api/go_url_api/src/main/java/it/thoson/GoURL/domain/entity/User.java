@@ -3,6 +3,9 @@ package it.thoson.GoURL.domain.entity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import it.thoson.GoURL.domain.enums.UserRole;
 import it.thoson.GoURL.domain.enums.UserStatus;
 import jakarta.persistence.Column;
@@ -17,15 +20,17 @@ public class User {
     @Id
     private String id;
 
-    @Column(nullable = true, unique = true, length = 255)
+    @Column(nullable = true, unique = true, length = 255, columnDefinition = "citext")
     private String email;
 
     @Column(name = "password_hash", nullable = true, length = 512)
     private String passwordHash;
 
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "role", nullable = true)
     private UserRole role;
 
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = true)
     private UserStatus status;
 

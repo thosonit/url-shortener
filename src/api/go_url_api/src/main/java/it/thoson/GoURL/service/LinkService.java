@@ -64,12 +64,6 @@ public class LinkService {
                 .map(link -> LinkResponse.from(link, baseUrl));
     }
 
-    @Transactional(readOnly = true)
-    public Page<LinkResponse> getAnonLinks(String anonSessionId, Pageable pageable, String baseUrl) {
-        return linkRepository.findByAnonSessionIdOrderByCreatedAtDesc(anonSessionId, pageable)
-                .map(link -> LinkResponse.from(link, baseUrl));
-    }
-
     @Transactional
     public LinkResponse updateLink(Long id, UpdateLinkRequest request, String baseUrl) {
         Link link = linkRepository.findById(id)
@@ -94,10 +88,5 @@ public class LinkService {
             throw new LinkNotFoundException(String.valueOf(id));
         }
         linkRepository.deleteById(id);
-    }
-
-    @Transactional
-    public void claimAnonLinks(String anonSessionId, String userId) {
-        linkRepository.claimAnonLinks(anonSessionId, userId);
     }
 }

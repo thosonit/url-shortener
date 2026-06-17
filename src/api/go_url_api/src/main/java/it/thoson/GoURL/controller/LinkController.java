@@ -1,7 +1,6 @@
 package it.thoson.GoURL.controller;
 
 import it.thoson.GoURL.dto.request.CreateLinkRequest;
-import it.thoson.GoURL.dto.request.UpdateLinkRequest;
 import it.thoson.GoURL.dto.response.ApiResponse;
 import it.thoson.GoURL.dto.response.LinkResponse;
 import it.thoson.GoURL.service.LinkService;
@@ -39,9 +38,7 @@ public class LinkController {
 
         String baseUrl = resolveBaseUrl(httpRequest);
 
-        LinkResponse response = request.anonSessionId() != null
-                ? linkService.createForAnon(request, baseUrl)
-                : linkService.createForUser(request, resolveUserId(httpRequest), baseUrl);
+        LinkResponse response = linkService.createForUser(request, resolveUserId(httpRequest), baseUrl);
 
         return ApiResponse.ok(response);
     }
