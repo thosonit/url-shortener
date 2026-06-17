@@ -32,39 +32,48 @@ Insert directly with the provided code.
 
 ## Authentication & identity
 
-- Sign-in uses Auth.js with the Google provider.
-- Provider identity is stored in the `accounts` table, not on `users` — one row per linked
-  OAuth identity, keyed by `(provider, provider_account_id)`. This keeps a second provider an
-  additive change later.
-- Upsert on callback: find `accounts(provider='google', provider_account_id=:sub)` → its
-  `users` row; if absent, create both (user + account) and link them.
-- `users` holds app concerns only: `email` (identity), `role`, `status`. No name/image
-  profile mirror — sign-in only, never displayed.
-- Session TTL: regular users **30 days** (Auth.js default), admin users **8 hours** to reduce
-  attack window if a token is compromised. No per-action re-auth at MVP — compensate with short
-  TTL and UI confirm dialogs for destructive actions.
+Two login paths:
+
+1. **Google OAuth** (regular users) — `GET /api/auth/google` → callback at
+   `GET /api/auth/google/callback`. On callback, upsert `accounts(provider='google',
+   provider_account_id=:sub)` → its `users` row; if absent, create both and link them. Also
+   claims any anonymous links (see [Anonymous session / link claim](#anonymous-session--link-claim)).
+
+2. **Email + password** (admin/super_admin only) — `POST /api/auth/login`. Credentials are
+   validated against `users.password_hash` (bcrypt). Only rows with `role IN ('admin',
+   'super_admin')` may use this path.
+
+**Token model.** Both paths issue a short-lived **access token** (JWT) and a long-lived
+**refresh token**. Clients send the access token as `Authorization: Bearer <token>`. Refresh via
+`POST /api/auth/refresh`; invalidate via `POST /api/auth/logout`.
+
+**`users` table.** Holds app concerns only: `email`, `password_hash` (null for OAuth users),
+`role`, `status`. No name/image mirror — sign-in only, never displayed.
+
+**OAuth identity** is stored in `accounts`, not on `users` — one row per linked OAuth identity,
+keyed by `(provider, provider_account_id)`. Adding a second provider later is additive.
 
 ## Anonymous session / link claim
 
-- `anon_session_id` is always **server-generated** (UUID v4, cryptographically random). The client
-  never generates or reads this value — a client-supplied ID could be used to claim another
-  user's links.
-- Issued as an `HttpOnly`, `Secure`, `SameSite=Lax` signed cookie.
-- **Lazy issuance:** the cookie is set only when the user creates their first anonymous link, not
-  on every visit. Visitors who never shorten a URL get no session.
-- Store `anon_session_id` on anonymous `links`.
-- Anonymous sessions are capped at **10 links per session** to limit abuse.
-- When the visitor signs in with Google, all unclaimed links are claimed in a single transaction
-  (all-or-nothing). No deduplication against existing links — duplicates are the user's to manage.
-  - assign `user_id`
-  - clear `expires_at` (unconditionally — a custom anonymous expiry is discarded on claim, by design)
-  - keep `anon_session_id` for history if needed
+Anonymous users are **real rows** in the `users` table (`role = 'anonymous'`), created lazily on
+the first shorten. There is no `anon_session_id` cookie — the server issues a JWT tied to the
+anonymous `users.id` instead.
+
+- **Lazy creation:** the anonymous user row and JWT are created only when the visitor shortens
+  their first URL, not on every visit.
+- The JWT is the sole identity carrier — the client never generates or supplies a user id.
+- `links.user_id` points to the anonymous user row from the start; no nullable owner field needed.
+- Anonymous sessions are capped at **10 links per user row** to limit abuse.
+- When the visitor signs in with Google, all links owned by the anonymous row are re-attributed in
+  a single transaction (all-or-nothing). No deduplication — duplicates are the user's to manage.
+  - `links.user_id` is updated from the anonymous `users.id` to the authenticated `users.id`
+  - `expires_at` is cleared unconditionally — a custom anonymous expiry is discarded on claim, by design
 
 Example claim update:
 ```sql
 UPDATE links
-SET user_id = :userId, expires_at = NULL
-WHERE anon_session_id = :anonId AND user_id IS NULL;
+SET user_id = :authUserId, expires_at = NULL
+WHERE user_id = :anonUserId;
 ```
 
 ## Redirect resolution
