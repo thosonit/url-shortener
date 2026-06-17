@@ -20,7 +20,7 @@ List endpoints include `"meta": { "page": 1, "limit": 20, "total": 137 }`.
 **Pagination.** `?page` (1-based), `?limit` (default 20, max 100).
 
 **Auth.**
-- _Anonymous_ — server issues a JWT on first request; ties anonymous links to the client.
+- _Anonymous_ — client calls `POST /api/auth/anonymous` to obtain a JWT before creating links; ties anonymous links to the client.
 - _User_ — JWT with `role: user`. Required by `/api/links/*`.
 - _Admin_ — JWT with `role: admin | super_admin`. Required by `/api/admin/*`.
 - _Super admin_ — email + password login at `POST /api/auth/login`.
@@ -41,6 +41,7 @@ List endpoints include `"meta": { "page": 1, "limit": 20, "total": 137 }`.
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
+| `POST` | `/api/auth/anonymous` | — | Issue anonymous JWT |
 | `POST` | `/api/auth/login` | — | Email + password login (admin/super_admin) |
 | `GET` | `/api/auth/google` | — | Begin Google OAuth |
 | `GET` | `/api/auth/google/callback` | — | OAuth callback + anon-link claim |
