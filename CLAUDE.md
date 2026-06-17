@@ -30,3 +30,18 @@ Read these before implementing.
 
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - Secrets in `.env*` (commit `.env.example` only); never commit real env files.
+
+## Agent Rules (MANDATORY)
+
+These rules apply to all agents and must not be bypassed.
+
+### Before writing any code
+
+1. **Confirm approach first** — state the plan (files to touch, key decisions, tradeoffs) and wait for explicit user approval before writing a single line of implementation code.
+2. **Brainstorm with SuperPower** — for any non-trivial task, use the SuperPower plugin to explore alternatives and surface blind spots before settling on an approach.
+
+### Git operations
+
+- **Never commit autonomously.** Only run `git commit` when the user explicitly asks (e.g. "commit", "commit this", "make a commit").
+- **Never push autonomously.** Only run `git push` when the user explicitly asks (e.g. "push", "push this").
+- Preparing a commit message draft is fine; executing the commit is not unless asked.
