@@ -41,7 +41,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/links").hasAnyRole("anonymous", "user")
                         .requestMatchers(HttpMethod.GET, "/api/links").hasRole("user")
                         .requestMatchers("/api/links/**").hasRole("user")
-                        // admin
+                        // admin — role assignment is super_admin only; other admin routes accept both
+                        .requestMatchers(HttpMethod.PATCH, "/api/admin/users/*/role").hasRole("super_admin")
                         .requestMatchers("/api/admin/**").hasAnyRole("admin", "super_admin")
                         // everything else requires auth
                         .anyRequest().authenticated()

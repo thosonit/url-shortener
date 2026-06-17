@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,4 +43,7 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 
     // FC-USERS: admin — view all links belonging to a user
     List<Link> findByUserIdOrderByCreatedAtDesc(String userId);
+
+    // FC-STATS: count links created on or after a given timestamp
+    long countByCreatedAtAfter(LocalDateTime since);
 }
