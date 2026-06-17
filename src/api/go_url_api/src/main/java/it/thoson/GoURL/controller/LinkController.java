@@ -1,6 +1,7 @@
 package it.thoson.GoURL.controller;
 
 import it.thoson.GoURL.dto.request.CreateLinkRequest;
+import it.thoson.GoURL.dto.request.UpdateLinkRequest;
 import it.thoson.GoURL.dto.response.ApiResponse;
 import it.thoson.GoURL.dto.response.LinkResponse;
 import it.thoson.GoURL.service.LinkService;
@@ -64,6 +65,34 @@ public class LinkController {
         String baseUrl = resolveBaseUrl(httpRequest);
         Page<LinkResponse> linkPages = linkService.getUserLinks(resolveUserId(), PageRequest.of(0, 10), baseUrl);
         return ApiResponse.ok(new ArrayList<>(linkPages.getContent()));
+    }
+
+    @Operation(
+        summary = "Update a link",
+        description = "Edit the destination URL or toggle active/disabled status. Caller must own the link.",
+        security = @SecurityRequirement(name = SwaggerConfig.BEARER_SCHEME)
+    )
+    @PatchMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<LinkResponse> updateLink(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateLinkRequest request,
+            HttpServletRequest httpRequest) {
+
+        String baseUrl = resolveBaseUrl(httpRequest);
+        LinkResponse response = linkService.updateLink(id, resolveUserId(), request, baseUrl);
+        return ApiResponse.ok(response);
+    }
+
+    @Operation(
+        summary = "Delete a link",
+        description = "Permanently deletes the link. Caller must own the link.",
+        security = @SecurityRequirement(name = SwaggerConfig.BEARER_SCHEME)
+    )
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLink(@PathVariable Long id) {
+        linkService.deleteLink(id, resolveUserId());
     }
 
     private String resolveBaseUrl(HttpServletRequest request) {

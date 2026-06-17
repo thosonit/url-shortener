@@ -37,6 +37,9 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
             @Param("status") LinkStatus status,
             Pageable pageable);
 
+    // FA-EDIT / FA-DELETE: ownership check — returns empty if id exists but belongs to another user
+    Optional<Link> findByIdAndUserId(Long id, String userId);
+
     // FC-USERS: admin — view all links belonging to a user
     List<Link> findByUserIdOrderByCreatedAtDesc(String userId);
 }

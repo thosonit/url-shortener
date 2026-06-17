@@ -5,6 +5,7 @@ import it.thoson.GoURL.domain.enums.LinkStatus;
 import it.thoson.GoURL.dto.request.CreateLinkRequest;
 import it.thoson.GoURL.dto.request.UpdateLinkRequest;
 import it.thoson.GoURL.dto.response.LinkResponse;
+import it.thoson.GoURL.exception.ForbiddenException;
 import it.thoson.GoURL.exception.LinkNotFoundException;
 import it.thoson.GoURL.repository.LinkRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -65,9 +66,13 @@ public class LinkService {
     }
 
     @Transactional
-    public LinkResponse updateLink(Long id, UpdateLinkRequest request, String baseUrl) {
-        Link link = linkRepository.findById(id)
-                .orElseThrow(() -> new LinkNotFoundException(String.valueOf(id)));
+    public LinkResponse updateLink(Long id, String userId, UpdateLinkRequest request, String baseUrl) {
+        // 404 if link doesn't exist at all, 403 if it exists but belongs to another user
+        if (!linkRepository.existsById(id)) {
+            throw new LinkNotFoundException(String.valueOf(id));
+        }
+        Link link = linkRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ForbiddenException("You do not own this link"));
 
         if (request.url() != null) {
             link.setOriginalUrl(request.url());
@@ -83,10 +88,12 @@ public class LinkService {
     }
 
     @Transactional
-    public void deleteLink(Long id) {
+    public void deleteLink(Long id, String userId) {
         if (!linkRepository.existsById(id)) {
             throw new LinkNotFoundException(String.valueOf(id));
         }
+        linkRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ForbiddenException("You do not own this link"));
         linkRepository.deleteById(id);
     }
 }
