@@ -4,8 +4,6 @@ Two surfaces:
 - **App** (`/api/*`, `/:code`) — anonymous or authenticated user.
 - **Admin** (`/api/admin/*`) — `admin` or `super_admin` role.
 
-Full request/response schemas live in [`openapi.yaml`](openapi.yaml).
-
 ---
 
 ## Conventions
