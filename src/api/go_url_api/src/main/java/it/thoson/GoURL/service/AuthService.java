@@ -32,6 +32,14 @@ public class AuthService {
         return issueTokens(user);
     }
 
+    public AuthResponse loginUser(String email, String hashedPassword) {
+        User user = userRepository.findByEmail(email);
+        if (user == null || !user.getPasswordHash().equals(hashedPassword)) {
+            throw new UnauthorizedException("Invalid email or password");
+        }
+        return issueTokens(user);
+    }
+
     public AuthResponse refreshAccessToken(String refreshToken) {
         Claims claims;
         try {

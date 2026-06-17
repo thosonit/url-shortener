@@ -124,18 +124,56 @@ Copy `.env.example` from the project root and fill in the values:
 
 ## API Endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Health check |
-| `POST` | `/api/links` | Create short link |
-| `GET` | `/{code}` | Redirect by short code |
-| `GET` | `/api/links` | List user's own links |
-| `PUT` | `/api/links/{id}` | Update link |
-| `DELETE` | `/api/links/{id}` | Delete link |
-| `GET` | `/api/admin/links` | Admin: manage all links |
-| `GET` | `/api/admin/users` | Admin: manage users |
-
 Full API reference: [`docs/api/api.md`](../../../../docs/api/api.md)
+
+### Response envelope
+
+```json
+{ "success": true,  "data": {},   "error": null }
+{ "success": false, "data": null, "error": { "code": "STRING_CODE", "message": "..." } }
+```
+
+List endpoints include `"meta": { "page": 1, "limit": 20, "total": 137 }`.
+
+### Public
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/:code` | — | Resolve & redirect |
+
+### Auth
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/anonymous` | — | Issue anonymous JWT |
+| `POST` | `/api/auth/login` | — | Email + password login (admin / super_admin) |
+| `GET` | `/api/auth/google` | — | Begin Google OAuth |
+| `GET` | `/api/auth/google/callback` | — | OAuth callback + anon-link claim |
+| `POST` | `/api/auth/refresh` | — | Refresh access token |
+| `POST` | `/api/auth/logout` | user | Invalidate refresh token |
+
+### Links (user)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/links` | anon / user | Create a short link |
+| `GET` | `/api/links` | user | List own links |
+| `PATCH` | `/api/links/:id` | user (owner) | Edit destination or status |
+| `DELETE` | `/api/links/:id` | user (owner) | Delete own link |
+
+### Admin
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/admin/stats` | admin | KPI snapshot |
+| `GET` | `/api/admin/links` | admin | Search / filter all links |
+| `GET` | `/api/admin/links/:id` | admin | Link detail |
+| `PATCH` | `/api/admin/links/:id` | admin | Disable / enable / force-expire |
+| `GET` | `/api/admin/users` | admin | List / search users |
+| `GET` | `/api/admin/users/:id` | admin | User detail |
+| `GET` | `/api/admin/users/:id/links` | admin | Links owned by user |
+| `PATCH` | `/api/admin/users/:id` | admin | Suspend / unsuspend |
+| `PATCH` | `/api/admin/users/:id/role` | super_admin | Assign role |
 
 ---
 
@@ -152,14 +190,17 @@ Full API reference: [`docs/api/api.md`](../../../../docs/api/api.md)
 - [ ] `POST /api/links` — validate → insert → `code = base62(id)` → return `{ code, shortUrl, expiresAt }`
 - [ ] `GET /{code}` — **302** active · **410** expired · **404** missing/disabled + atomic `click_count + 1`
 - [ ] `GlobalExceptionHandler` — map domain exceptions to HTTP responses
-- [ ] Google OAuth2 — on callback upsert `Account` + `User` (email + role only)
-- [ ] Anonymous `anonSessionId` signed cookie; claim on sign-in → assign `userId`, clear `expiresAt`
+- [ ] `POST /api/auth/anonymous` — issue anonymous JWT; ties anonymous links to the client
+- [ ] `POST /api/auth/login` — email + password login for admin / super_admin
+- [ ] Google OAuth2 — `GET /api/auth/google` → `GET /api/auth/google/callback`; on callback upsert `Account` + `User` + claim anonymous links
+- [ ] `POST /api/auth/refresh` / `POST /api/auth/logout` — token lifecycle
 - [ ] Anonymous links expire in 30 days; authenticated links permanent or custom date
-- [ ] `GET /api/me/links` — list own links (auth required)
-- [ ] `PATCH /api/me/links/{id}` — edit URL or toggle disable/enable (owner only → 404 if not owned)
-- [ ] `DELETE /api/me/links/{id}` — hard delete (owner only)
+- [ ] `GET /api/links` — list own links (user JWT required)
+- [ ] `PATCH /api/links/{id}` — edit URL or toggle disable/enable (owner only → 404 if not owned)
+- [ ] `DELETE /api/links/{id}` — hard delete (owner only)
 - [ ] RBAC guard on all `/api/admin/**` — role presets: `USER / ADMIN / SUPER_ADMIN`
-- [ ] `GET /api/admin/dashboard` — total links, links today, active users
-- [ ] `GET /api/admin/links` — search/filter + pagination; disable / enable / force-expire
-- [ ] `GET /api/admin/users` — list users; suspend / reactivate; view user's links
-- [ ] `POST /api/admin/users/{id}/role` — SUPER_ADMIN only; block self-demotion + last super-admin removal
+- [ ] `GET /api/admin/stats` — total links, links today, active users (KPI snapshot)
+- [ ] `GET /api/admin/links` + `GET /api/admin/links/{id}` — search/filter + pagination; `PATCH` disable / enable / force-expire
+- [ ] `GET /api/admin/users` + `GET /api/admin/users/{id}` + `GET /api/admin/users/{id}/links` — list/detail/links per user
+- [ ] `PATCH /api/admin/users/{id}` — suspend / unsuspend
+- [ ] `PATCH /api/admin/users/{id}/role` — SUPER_ADMIN only; block self-demotion + last super-admin removal

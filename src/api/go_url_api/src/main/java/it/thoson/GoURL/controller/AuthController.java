@@ -28,4 +28,18 @@ public class AuthController {
     public AuthResponse createAnonymousSession() {
         return authService.createAnonymousSession();
     }
+
+    @Operation(summary = "Refresh access token", description = "Refreshes the access token using a valid refresh token. Returns a new access token and refresh token.")
+    @PostMapping("/refresh")
+    @ResponseStatus(HttpStatus.OK)
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        return authService.refreshAccessToken(refreshToken);
+    }
+
+    @Operation(summary = "Login with Password", description = "Logs in a user with email and password. (Not implemented yet)")
+    @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
+    public AuthResponse loginUser(String email, String hashedPassword) {
+        return authService.loginUser(email, hashedPassword);
+    }
 }
