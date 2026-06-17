@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
                         // links — anon + user
                         .requestMatchers(HttpMethod.POST, "/api/links").hasAnyRole("anonymous", "user")
+                        .requestMatchers(HttpMethod.GET, "/api/links").hasRole("user")
                         .requestMatchers("/api/links/**").hasRole("user")
                         // admin
                         .requestMatchers("/api/admin/**").hasAnyRole("admin", "super_admin")
