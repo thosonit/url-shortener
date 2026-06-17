@@ -37,15 +37,6 @@ public class LinkService {
         return LinkResponse.from(linkRepository.save(link), baseUrl);
     }
 
-    @Transactional
-    public LinkResponse createForAnon(CreateLinkRequest request, String baseUrl) {
-        log.info("Creating link for anonymous user with URL {}", request.url());
-        String anonSessionId = request.anonSessionId();
-        Link link = Link.forAnon(request.url(), anonSessionId);
-        link.setCode(codeGenerator.generate(request.url()));
-        return LinkResponse.from(linkRepository.save(link), baseUrl);
-    }
-
     @Transactional(readOnly = true)
     public String resolveOriginalUrl(String code) {
         Link link = linkRepository.findByCode(code)

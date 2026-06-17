@@ -25,9 +25,6 @@ public class Link {
     @Column(name = "user_id")
     private String userId;
 
-    @Column(name = "anon_session_id")
-    private String anonSessionId;
-
     @Column(name = "click_count", nullable = false)
     private int clickCount = 0;
 
@@ -46,14 +43,6 @@ public class Link {
         link.originalUrl = originalUrl;
         link.userId = userId;
         link.expiresAt = null; // permanent
-        return link;
-    }
-
-    public static Link forAnon(String originalUrl, String anonSessionId) {
-        Link link = new Link();
-        link.originalUrl = originalUrl;
-        link.anonSessionId = anonSessionId;
-        link.expiresAt = LocalDateTime.now().plusDays(30);
         return link;
     }
 
@@ -88,14 +77,6 @@ public class Link {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public String getAnonSessionId() {
-        return anonSessionId;
-    }
-
-    public void setAnonSessionId(String anonSessionId) {
-        this.anonSessionId = anonSessionId;
     }
 
     public int getClickCount() {
