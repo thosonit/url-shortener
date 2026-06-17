@@ -51,31 +51,21 @@ Table accounts {
   }
 }
 
-// Auth.js adapter. Admin sessions get a shorter `expires` applied app-side.
-Table sessions {
-  id            text [pk]
-  session_token text [unique, not null]
-  user_id       text [not null, ref: > users.id]
-  expires       timestamptz [not null]
-}
-
 // Insert row -> UPDATE code = base62(id) in the same transaction.
 // Active = status='active' AND (expires_at IS NULL OR expires_at > now()).
 // Delete is hard; code never reused (monotonic id).
 Table links {
-  id              bigint [pk, increment]
-  code            text [unique, not null, note: 'base62(id)']
-  original_url    text [not null]
-  user_id         text [not null, ref: > users.id, note: 'points to anonymous user row until claimed']
-  anon_session_id text [note: 'null after claim']
-  expires_at      timestamptz [note: 'null = permanent']
-  click_count     bigint [not null, default: 0]
-  status          link_status [not null, default: 'active']
-  created_at      timestamptz [not null, default: `now()`]
+  id           bigint [pk, increment]
+  code         text [unique, not null, note: 'base62(id)']
+  original_url text [not null]
+  user_id      text [not null, ref: > users.id, note: 'points to anonymous user row until claimed']
+  expires_at   timestamptz [note: 'null = permanent']
+  click_count  bigint [not null, default: 0]
+  status       link_status [not null, default: 'active']
+  created_at   timestamptz [not null, default: `now()`]
 
   Indexes {
     (user_id, created_at)
-    anon_session_id [note: 'where not null']
     expires_at [note: 'where not null']
     status
   }
