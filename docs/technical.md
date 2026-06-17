@@ -55,12 +55,13 @@ keyed by `(provider, provider_account_id)`. Adding a second provider later is ad
 
 ## Anonymous session / link claim
 
-Anonymous users are **real rows** in the `users` table (`role = 'anonymous'`), created lazily on
-the first shorten. There is no `anon_session_id` cookie — the server issues a JWT tied to the
-anonymous `users.id` instead.
+Anonymous users are **real rows** in the `users` table (`role = 'anonymous'`), created on demand
+via `POST /api/auth/anonymous`. There is no `anon_session_id` cookie — the server issues a JWT
+tied to the anonymous `users.id` instead.
 
-- **Lazy creation:** the anonymous user row and JWT are created only when the visitor shortens
-  their first URL, not on every visit.
+- **Explicit creation:** the client calls `POST /api/auth/anonymous` before shortening a link.
+  The server creates the anonymous user row and returns a JWT. Subsequent link creation calls
+  carry this token.
 - The JWT is the sole identity carrier — the client never generates or supplies a user id.
 - `links.user_id` points to the anonymous user row from the start; no nullable owner field needed.
 - Anonymous sessions are capped at **10 links per user row** to limit abuse.
