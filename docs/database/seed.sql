@@ -1,14 +1,10 @@
 -- URL Shortener — seed data
 -- Assumes init.sql has already been applied.
--- Replace email values with real accounts before running.
 
--- ---------------------------------------------------------------------------
--- Default admin accounts
--- Auth.js creates users on first sign-in; these rows pre-assign roles so the
--- correct role is in place the moment the OAuth callback fires.
--- ---------------------------------------------------------------------------
-
-INSERT INTO users (id, email, role, status, created_at) VALUES
-  ('cuid_super_01', 'super@example.com', 'super_admin', 'active', now()),
-  ('cuid_admin_01', 'admin@example.com', 'admin',       'active', now())
-ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role;
+-- Super admin with email + password login.
+-- Password hash: bcrypt(cost=10) of the value in .env SUPER_ADMIN_PASSWORD.
+INSERT INTO users (id, email, password_hash, role, status, created_at) VALUES
+  ('seed_super_01', 'thoson.it@gmail.com', '$2b$10$8PWUqbU/NpnjNYdFBP9YJOV8Ya9Hl92NuNf8sdEkqBLf9aPt1ScOq', 'super_admin', 'active', now())
+ON CONFLICT (email) DO UPDATE SET
+  password_hash = EXCLUDED.password_hash,
+  role          = EXCLUDED.role;
