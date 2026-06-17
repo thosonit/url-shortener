@@ -25,11 +25,12 @@ Enum link_status {
 
 // Provider identity lives in `accounts`. Auth.js adapter fields stripped to only what the app reads.
 Table users {
-  id          text [pk]
-  email       citext [unique, note: 'null for anonymous users']
-  role        user_role [not null, default: 'anonymous', note: 'anonymous = created on first shorten, promoted to user on sign-in']
-  status      user_status [not null, default: 'active', note: 'suspended = no link creation/claim; existing links unaffected']
-  created_at  timestamptz [not null, default: `now()`]
+  id            text [pk]
+  email         citext [unique, note: 'null for anonymous users']
+  password_hash text [note: 'null for OAuth users; only set for admin/super_admin email+password login']
+  role          user_role [not null, default: 'anonymous', note: 'anonymous = created on first shorten, promoted to user on sign-in']
+  status        user_status [not null, default: 'active', note: 'suspended = no link creation/claim; existing links unaffected']
+  created_at    timestamptz [not null, default: `now()`]
 
   Indexes {
     role
