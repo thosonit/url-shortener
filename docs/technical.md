@@ -11,19 +11,24 @@
 
 ## Code generation options
 
-### Stored code
-- Insert link row first.
-- Compute `code = base62(id)` after insert.
-- Update the row with the new code.
+**Decision: store the `code`, generated via CTE in a single round-trip.**
 
-### Computed code on read
-- Store only `id`.
-- Convert `id` to `base62` when generating short URLs or resolving redirects.
-- Simpler storage, but may require extra read-time conversion.
+```sql
+WITH inserted AS (
+  INSERT INTO links (...) VALUES (...) RETURNING id
+)
+UPDATE links SET code = base62(inserted.id)
+FROM inserted WHERE links.id = inserted.id
+RETURNING *;
+```
 
-**Decision: store the `code`.** A stored, uniquely-indexed `code` gives the redirect hot path a
-single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
-`UPDATE code = base62(id)` in the same transaction (see [`database.md`](database.md)).
+A stored, uniquely-indexed `code` gives the redirect hot path a single indexed lookup and lets
+the DB enforce uniqueness. The CTE approach collapses insert + update into one round-trip,
+keeping link creation atomic with no extra latency.
+
+**Custom aliases:** User-supplied codes skip base62. Validate format before insert:
+alphanumeric only, 4–20 chars, reject reserved words (`api`, `admin`, `health`, etc.).
+Insert directly with the provided code.
 
 ## Authentication & identity
 
@@ -35,13 +40,17 @@ single indexed lookup and lets the DB enforce uniqueness. Insert the row, then
   `users` row; if absent, create both (user + account) and link them.
 - `users` holds app concerns only: `email` (identity), `role`, `status`. No name/image
   profile mirror — sign-in only, never displayed.
-- Admin sessions use a shorter session TTL than regular users.
+- Session TTL: regular users **30 days** (Auth.js default), admin users **8 hours** to reduce
+  attack window if a token is compromised. No per-action re-auth at MVP — compensate with short
+  TTL and UI confirm dialogs for destructive actions.
 
 ## Anonymous session / link claim
 
 - Issue an `anon_session_id` in a signed cookie for anonymous visitors.
 - Store `anon_session_id` on anonymous `links`.
-- When the visitor signs in with Google:
+- Anonymous sessions are capped at **10 links per session** to limit abuse.
+- When the visitor signs in with Google, all unclaimed links are claimed in a single transaction
+  (all-or-nothing). No deduplication against existing links — duplicates are the user's to manage.
   - assign `user_id`
   - clear `expires_at` (unconditionally — a custom anonymous expiry is discarded on claim, by design)
   - keep `anon_session_id` for history if needed
@@ -57,8 +66,9 @@ WHERE anon_session_id = :anonId AND user_id IS NULL;
 
 A code resolves to one of four outcomes:
 
-- **Active** → `302` redirect to `original_url`. `302` (not `301`) is required so the redirect is
-  not cached and every click reaches the server for counting.
+- **Active** → `302` redirect to `original_url`. `302` (not `301`, not `307`) is required so the
+  redirect is not cached and every click reaches the server for counting. URL shorteners are
+  GET-only so `302` and `307` behave identically; `302` is kept for broader tool compatibility.
 - **Expired** (`expires_at < now`) → `410 Gone` with a friendly "Link expired" message.
 - **Disabled** (`status='disabled'`) → `404 Not Found`. A takedown should not confirm the code
   existed, so it is indistinguishable from a never-created code.
@@ -72,7 +82,10 @@ A code resolves to one of four outcomes:
 
 ## Click tracking
 
-- Increment `click_count` atomically (DB-side `+1`, never read-modify-write) on a successful redirect.
+- Increment `click_count` atomically (DB-side `+1`, never read-modify-write) on a successful
+  redirect, synchronously on the hot path.
+- Sync increment is correct and simple at MVP scale. Migrate to an async queue only when p99
+  redirect latency exceeds 50ms.
 - The single `click_count` counter is the MVP for per-link totals. Time-bucketed analytics
   (daily trends, growth charts) and per-click rows (geo/referrer/device) are out of scope.
 
@@ -98,9 +111,12 @@ Authenticated users manage their own links (FA-MANAGE), mirroring the admin acti
 
 - Suspending a user (`users.status = 'suspended'`) rejects their session: they cannot create
   new links or claim anonymous ones.
-- Suspension does **not** take down their existing links. Redirect resolution checks only the
-  link's own `status` + expiry, not the owner — so prior links keep resolving. To pull them
-  offline, an admin disables the links individually (see [`features/FC-LINKS`](features/FC-LINKS-link-management.md)).
+- Suspension does **not** automatically take down their existing links. Redirect resolution checks
+  only the link's own `status` + expiry, not the owner — so prior links keep resolving.
+- For abuse/spam cases, the admin suspend flow exposes a **"Suspend + disable all links"** option
+  that updates `users.status` and bulk-sets `links.status = 'disabled'` in one transaction.
+  Standard suspension (policy/billing) leaves links live. No separate endpoint — this is a flag
+  on the suspend action.
 
 ## CMS permissions
 
