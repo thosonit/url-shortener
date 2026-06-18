@@ -1,4 +1,4 @@
-# url-shortener
+# ShortLink
 
 A service for turning long URLs into short, shareable links and redirecting visitors back to the original destination.
 

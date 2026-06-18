@@ -1,4 +1,4 @@
-// URL Shortener — database schema (DBML)
+// ShortLink — database schema (DBML)
 // Render at https://dbdiagram.io or with `@dbml/cli`.
 
 Project url_shortener {

@@ -1,4 +1,4 @@
-# Implementation Plan — URL Shortener
+# Implementation Plan — ShortLink
 
 > From docs-only scaffold → working application.
 > Stack (per [README](../../README.md#tech-stack)): **Next.js (App Router, TS) · Prisma · PostgreSQL · Auth.js**.
@@ -6,7 +6,7 @@
 
 ## Requirements restatement
 
-Build a URL shortener with three surfaces:
+Build ShortLink with three surfaces:
 
 1. **App / Web** — public UI to create short links (QR + copy), follow redirects, sign in with Google, view history, manage own links (edit / disable / delete), set expiry. (`FA-SHORTEN`–`FA-EXPIRY`)
 2. **REST API** — programmatic link create / redirect / history / auth. (`docs/api/`)

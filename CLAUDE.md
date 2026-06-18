@@ -2,7 +2,7 @@
 
 ## What this is
 
-A URL shortener. Two core operations everything else builds on:
+ShortLink — a URL shortener. Two core operations everything else builds on:
 
 1. **Shorten** — accept a long URL, generate a short code, store the mapping.
 2. **Redirect** — look up a short code, redirect to the original URL.

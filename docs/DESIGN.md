@@ -1,4 +1,4 @@
-# sho.rt — URL Shortener · Design & Build Spec
+# ShortLink · Design & Build Spec
 
 A handoff spec for rebuilding this UI in a production codebase. The reference
 implementation in this folder is a single interactive React prototype

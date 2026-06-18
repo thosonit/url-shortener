@@ -1,6 +1,6 @@
 # GoURL API
 
-REST API backend for the **GoURL** URL shortener project. Built with **Spring Boot 4** and **Java 17**, it provides all business logic for the GoURL web application.
+REST API backend for the **ShortLink** project. Built with **Spring Boot 4** and **Java 17**, it provides all business logic for the GoURL web application.
 
 ## Tech Stack
 
