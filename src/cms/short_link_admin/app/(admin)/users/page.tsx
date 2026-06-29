@@ -99,15 +99,16 @@ export default function UsersPage() {
         </div>
       ) : (
         <>
-          <Table aria-label="Users table">
-            <Table.Header>
-              <Table.Column isRowHeader>Email</Table.Column>
-              <Table.Column>Role</Table.Column>
-              <Table.Column>Status</Table.Column>
-              <Table.Column>Joined</Table.Column>
-              <Table.Column>Actions</Table.Column>
-            </Table.Header>
-            <Table.Body items={data.items}>
+          <Table>
+            <Table.Content aria-label="Users table">
+              <Table.Header>
+                <Table.Column isRowHeader>Email</Table.Column>
+                <Table.Column>Role</Table.Column>
+                <Table.Column>Status</Table.Column>
+                <Table.Column>Joined</Table.Column>
+                <Table.Column>Actions</Table.Column>
+              </Table.Header>
+              <Table.Body items={data.items}>
               {(user: UserRow) => (
                 <Table.Row key={user.id} id={user.id}>
                   <Table.Cell>{user.email}</Table.Cell>
@@ -162,7 +163,8 @@ export default function UsersPage() {
                   </Table.Cell>
                 </Table.Row>
               )}
-            </Table.Body>
+              </Table.Body>
+            </Table.Content>
           </Table>
 
           <div className="mt-4 flex justify-center">

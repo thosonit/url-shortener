@@ -7,8 +7,6 @@ import {
   Spinner,
   Surface,
   Table,
-  Select,
-  ListBoxItem,
   Modal,
   Separator,
   useOverlayState,
@@ -248,17 +246,16 @@ export default function UserDetailPage({
               <p className="mb-3 text-sm text-default-500">
                 Change role for {userDetail.email}
               </p>
-              <Select
+              <select
+                className="w-full rounded-lg border border-default-300 bg-default-50 px-3 py-2 text-sm"
                 aria-label="Role"
-                selectedKey={selectedRole}
-                onSelectionChange={(key) => {
-                  if (key) setSelectedRole(key as string);
-                }}
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
               >
-                <ListBoxItem id="user">User</ListBoxItem>
-                <ListBoxItem id="admin">Admin</ListBoxItem>
-                <ListBoxItem id="super_admin">Super Admin</ListBoxItem>
-              </Select>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="ghost" onPress={roleModalState.close}>

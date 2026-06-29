@@ -34,25 +34,25 @@ export default async function DashboardPage() {
           label="Total Links"
           value={stats.totalLinks.toLocaleString()}
           icon={Link2}
-          colorClass="bg-accent"
+          colorClass="bg-blue-500"
         />
         <KpiCard
           label="Links Today"
           value={stats.linksToday.toLocaleString()}
           icon={CalendarPlus}
-          colorClass="bg-success"
+          colorClass="bg-emerald-500"
         />
         <KpiCard
           label="Total Users"
           value={stats.totalUsers.toLocaleString()}
           icon={Users}
-          colorClass="bg-secondary"
+          colorClass="bg-purple-500"
         />
         <KpiCard
           label="Total Clicks"
           value={stats.totalClicks.toLocaleString()}
           icon={MousePointerClick}
-          colorClass="bg-warning"
+          colorClass="bg-amber-500"
         />
       </div>
     </div>
