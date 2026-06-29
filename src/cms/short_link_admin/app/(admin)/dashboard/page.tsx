@@ -1,9 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Surface, Spinner } from "@heroui/react";
+import { Surface } from "@heroui/react";
 import { Link2, MousePointerClick, Users, CalendarPlus } from "lucide-react";
-import { getStats, type StatsData } from "@/lib/api";
+import { getStats } from "@/lib/actions/stats";
 
 interface KpiCardProps {
   label: string;
@@ -26,27 +23,8 @@ function KpiCard({ label, value, icon: Icon, colorClass }: KpiCardProps) {
   );
 }
 
-export default function DashboardPage() {
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    getStats().then(setStats).catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : "Failed to load stats");
-    });
-  }, []);
-
-  if (error) {
-    return <p className="text-danger">{error}</p>;
-  }
-
-  if (!stats) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+export default async function DashboardPage() {
+  const stats = await getStats();
 
   return (
     <div>

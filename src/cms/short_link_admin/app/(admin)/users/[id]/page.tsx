@@ -19,11 +19,9 @@ import {
   getUserLinks,
   patchUser,
   assignRole,
-  type UserItem,
-  type LinkItem,
-  type PaginatedResult,
-} from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+  type UserRow,
+} from "@/lib/actions/users";
+import { getSessionUser } from "@/lib/actions/auth";
 import { StatusChip } from "@/lib/status-chip";
 import { SimplePagination } from "@/lib/simple-pagination";
 
@@ -42,16 +40,20 @@ export default function UserDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { user: currentUser } = useAuth();
-  const [userDetail, setUserDetail] = useState<UserItem | null>(null);
-  const [links, setLinks] = useState<PaginatedResult<LinkItem> | null>(null);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [userDetail, setUserDetail] = useState<UserRow | null>(null);
+  const [links, setLinks] = useState<{ items: Array<{ id: string; code: string; originalUrl: string; clickCount: number; status: string; createdAt: string }>; total: number } | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const roleModalState = useOverlayState();
 
-  const isSuperAdmin = currentUser?.role === "super_admin";
+  const isSuperAdmin = currentRole === "super_admin";
+
+  useEffect(() => {
+    getSessionUser().then((s) => setCurrentRole(s?.role ?? null));
+  }, []);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -107,7 +109,7 @@ export default function UserDetailPage({
     }
   }
 
-  const totalPages = links ? Math.ceil(links.meta.total / LIMIT) : 0;
+  const totalPages = links ? Math.ceil(links.total / LIMIT) : 0;
 
   if (error && !userDetail) {
     return <p className="text-danger">{error}</p>;

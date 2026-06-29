@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Spinner, Table, SearchField } from "@heroui/react";
 import { ShieldBan, ShieldCheck, Eye } from "lucide-react";
-import { getUsers, patchUser, type UserItem, type PaginatedResult } from "@/lib/api";
+import { getUsers, patchUser, type UserRow, type PaginatedUsers } from "@/lib/actions/users";
 import { useDebounce } from "@/lib/use-debounce";
 import { StatusChip } from "@/lib/status-chip";
 import { SimplePagination } from "@/lib/simple-pagination";
@@ -20,7 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function UsersPage() {
   const router = useRouter();
-  const [data, setData] = useState<PaginatedResult<UserItem> | null>(null);
+  const [data, setData] = useState<PaginatedUsers | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
@@ -70,7 +70,7 @@ export default function UsersPage() {
     }
   }
 
-  const totalPages = data ? Math.ceil(data.meta.total / LIMIT) : 0;
+  const totalPages = data ? Math.ceil(data.total / LIMIT) : 0;
 
   return (
     <div>
@@ -108,7 +108,7 @@ export default function UsersPage() {
               <Table.Column>Actions</Table.Column>
             </Table.Header>
             <Table.Body items={data.items}>
-              {(user) => (
+              {(user: UserRow) => (
                 <Table.Row key={user.id} id={user.id}>
                   <Table.Cell>{user.email}</Table.Cell>
                   <Table.Cell>

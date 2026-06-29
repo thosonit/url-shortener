@@ -1,34 +1,14 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
 import { Button, Input, Label, Surface, TextField } from "@heroui/react";
-import { login, setToken } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+import { loginAction, type LoginResult } from "@/lib/actions/auth";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { setUser } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const data = await login({ email, password });
-      setToken(data.accessToken);
-      setUser(data.user);
-      router.push("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [state, formAction, isPending] = useActionState<LoginResult, FormData>(
+    loginAction,
+    {}
+  );
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-default-50 px-4">
@@ -38,36 +18,27 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-default-500">Admin Panel</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <TextField isRequired>
+        <form action={formAction} className="flex flex-col gap-4">
+          <TextField name="email" isRequired>
             <Label>Email</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-            />
+            <Input type="email" autoFocus />
           </TextField>
-          <TextField isRequired>
+          <TextField name="password" isRequired>
             <Label>Password</Label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <Input type="password" />
           </TextField>
 
-          {error && (
-            <p className="text-sm text-danger">{error}</p>
+          {state.error && (
+            <p className="text-sm text-danger">{state.error}</p>
           )}
 
           <Button
             type="submit"
             variant="primary"
             className="mt-2 w-full"
-            isDisabled={loading}
+            isDisabled={isPending}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {isPending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
       </Surface>

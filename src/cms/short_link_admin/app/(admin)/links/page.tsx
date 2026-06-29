@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import {
-  Button,
-  Input,
-  Spinner,
-  Table,
-  Select,
-  ListBoxItem,
-  Label,
-  SearchField,
-} from "@heroui/react";
+import { Button, Spinner, Table, Select, ListBoxItem, SearchField } from "@heroui/react";
 import { Ban, Play, Timer } from "lucide-react";
-import { getLinks, patchLink, type LinkItem, type PaginatedResult } from "@/lib/api";
+import { getLinks, patchLink, type LinkRow, type PaginatedLinks } from "@/lib/actions/links";
 import { useDebounce } from "@/lib/use-debounce";
 import { StatusChip } from "@/lib/status-chip";
 import { SimplePagination } from "@/lib/simple-pagination";
@@ -21,7 +12,7 @@ import { ConfirmModal } from "@/lib/confirm-modal";
 const LIMIT = 20;
 
 export default function LinksPage() {
-  const [data, setData] = useState<PaginatedResult<LinkItem> | null>(null);
+  const [data, setData] = useState<PaginatedLinks | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -76,7 +67,7 @@ export default function LinksPage() {
     }
   }
 
-  const totalPages = data ? Math.ceil(data.meta.total / LIMIT) : 0;
+  const totalPages = data ? Math.ceil(data.total / LIMIT) : 0;
 
   const confirmMessages: Record<string, string> = {
     disable: "Disable this link? It will return 404 on redirect.",
@@ -140,7 +131,7 @@ export default function LinksPage() {
               <Table.Column>Actions</Table.Column>
             </Table.Header>
             <Table.Body items={data.items}>
-              {(link) => (
+              {(link: LinkRow) => (
                 <Table.Row key={link.id} id={link.id}>
                   <Table.Cell>
                     <span className="font-mono text-sm">{link.code}</span>
@@ -183,8 +174,8 @@ export default function LinksPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label="Enable link"
                           isIconOnly
+                          aria-label="Enable link"
                           onPress={() => setConfirmModal({ id: link.id, action: "enable" })}
                         >
                           <Play className="h-4 w-4" />
