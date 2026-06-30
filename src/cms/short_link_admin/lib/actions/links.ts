@@ -1,8 +1,14 @@
 "use server";
 
+import { z } from "zod";
 import { prisma } from "../prisma";
 import { getSession } from "../session";
 import { type link_status } from "../generated/prisma/client";
+
+const updateLinkSchema = z.object({
+  originalUrl: z.url(),
+  expiresAt: z.iso.datetime().nullable(),
+});
 
 export interface LinkRow {
   id: string;
@@ -115,4 +121,29 @@ export async function patchLink(
     where: { id: BigInt(id) },
     data: data as never,
   });
+}
+
+export async function updateLink(
+  id: string,
+  body: { originalUrl: string; expiresAt: string | null }
+): Promise<void> {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthenticated");
+
+  const { originalUrl, expiresAt } = updateLinkSchema.parse(body);
+
+  await prisma.links.update({
+    where: { id: BigInt(id) },
+    data: {
+      original_url: originalUrl,
+      expires_at: expiresAt ? new Date(expiresAt) : null,
+    },
+  });
+}
+
+export async function deleteLink(id: string): Promise<void> {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthenticated");
+
+  await prisma.links.delete({ where: { id: BigInt(id) } });
 }

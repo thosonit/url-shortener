@@ -2,12 +2,20 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button, Spinner, Table, SearchField } from "@heroui/react";
-import { Ban, ExternalLink, Play, Timer } from "lucide-react";
-import { getLinks, patchLink, type LinkRow, type PaginatedLinks } from "@/lib/actions/links";
+import { Ban, ExternalLink, Pencil, Play, Timer, Trash2 } from "lucide-react";
+import {
+  deleteLink,
+  getLinks,
+  patchLink,
+  updateLink,
+  type LinkRow,
+  type PaginatedLinks,
+} from "@/lib/actions/links";
 import { useDebounce } from "@/lib/use-debounce";
 import { StatusChip } from "@/lib/status-chip";
 import { SimplePagination } from "@/lib/simple-pagination";
 import { ConfirmModal } from "@/lib/confirm-modal";
+import { EditLinkModal } from "@/lib/edit-link-modal";
 
 const LIMIT = 20;
 const SHORT_BASE = process.env.NEXT_PUBLIC_SHORT_BASE_URL ?? "http://localhost:8080";
@@ -21,8 +29,10 @@ export default function LinksPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     id: string;
-    action: "disable" | "enable" | "forceExpire";
+    action: "disable" | "enable" | "forceExpire" | "delete";
   } | null>(null);
+  const [editingLink, setEditingLink] = useState<LinkRow | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -52,7 +62,9 @@ export default function LinksPage() {
     if (!confirmModal) return;
     setActionLoading(confirmModal.id);
     try {
-      if (confirmModal.action === "forceExpire") {
+      if (confirmModal.action === "delete") {
+        await deleteLink(confirmModal.id);
+      } else if (confirmModal.action === "forceExpire") {
         await patchLink(confirmModal.id, { forceExpire: true });
       } else {
         await patchLink(confirmModal.id, {
@@ -68,12 +80,27 @@ export default function LinksPage() {
     }
   }
 
+  async function handleEditSave(originalUrl: string, expiresAt: string | null) {
+    if (!editingLink) return;
+    setEditLoading(true);
+    try {
+      await updateLink(editingLink.id, { originalUrl, expiresAt });
+      await fetchLinks();
+      setEditingLink(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   const totalPages = data ? Math.ceil(data.total / LIMIT) : 0;
 
   const confirmMessages: Record<string, string> = {
     disable: "Disable this link? It will return 404 on redirect.",
     enable: "Re-enable this link?",
     forceExpire: "Force-expire this link? It will return 410 Gone on redirect.",
+    delete: "Permanently delete this link? This cannot be undone.",
   };
 
   return (
@@ -208,6 +235,24 @@ export default function LinksPage() {
                             <Timer className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          isIconOnly
+                          aria-label="Edit link"
+                          onPress={() => setEditingLink(link)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger-soft"
+                          isIconOnly
+                          aria-label="Delete link"
+                          onPress={() => setConfirmModal({ id: link.id, action: "delete" })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </Table.Cell>
                   </Table.Row>
@@ -230,6 +275,13 @@ export default function LinksPage() {
         message={confirmModal ? confirmMessages[confirmModal.action] : ""}
         confirmVariant={confirmModal?.action === "enable" ? "primary" : "danger"}
         isLoading={!!actionLoading}
+      />
+
+      <EditLinkModal
+        link={editingLink}
+        onClose={() => setEditingLink(null)}
+        onSave={handleEditSave}
+        isLoading={editLoading}
       />
     </div>
   );
