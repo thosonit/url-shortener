@@ -20,18 +20,19 @@ fi
 SSH_TARGET="${SERVER_USER}@${SERVER_HOST}"
 
 # --- Functions ---
-build() {
-  echo "==> Building Next.js app..."
-  cd "$SCRIPT_DIR"
-  npm run build
-  echo "    Build complete."
-}
-
 ensure_host_key() {
   if ! ssh-keygen -F "$SERVER_HOST" &>/dev/null; then
     echo "==> Adding server host key to known_hosts..."
     ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   fi
+}
+
+build() {
+  echo "==> Building Next.js app locally..."
+  cd "$SCRIPT_DIR"
+  npm run build
+  test -f "$SCRIPT_DIR/.next/BUILD_ID" || { echo "    Build failed: no .next/BUILD_ID produced."; exit 1; }
+  echo "    Build complete."
 }
 
 upload() {
@@ -50,7 +51,7 @@ upload() {
     "$SCRIPT_DIR/prisma" \
     "${SSH_TARGET}:${SERVER_DIR}/"
   echo "==> Installing production dependencies on server..."
-  ssh $SSH_OPTS "$SSH_TARGET" "cd ${SERVER_DIR} && npm install --omit=dev"
+  ssh $SSH_OPTS "$SSH_TARGET" "cd ${SERVER_DIR} && npm install --omit=dev && npx prisma generate"
   echo "    Upload complete."
 }
 
